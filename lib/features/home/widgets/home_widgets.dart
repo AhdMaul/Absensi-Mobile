@@ -1,8 +1,6 @@
-// lib/features/home/widgets/home_widget.dart
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
 import '../../../core/routes/app_routes.dart';
 
 class HomeWidget extends StatefulWidget {
@@ -13,111 +11,112 @@ class HomeWidget extends StatefulWidget {
 }
 
 class _HomeWidgetState extends State<HomeWidget> {
-  String userName = "Pengguna";
-  DateTime _currentTime = DateTime.now();
-  Timer? _timer;
-  DateTime? _lastAttendanceTime; // State untuk menyimpan waktu absen terakhir
+  DateTime? _lastAttendanceTime;
 
   @override
   void initState() {
     super.initState();
-    Intl.defaultLocale = 'id_ID';
-    // _loadUserData();
-    _loadLastAttendanceTime(); // Muat waktu absen terakhir dari SharedPreferences
+    _loadLastAttendance();
+  }
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) setState(() => _currentTime = DateTime.now());
+  Future<void> _loadLastAttendance() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedTime = prefs.getString('lastAttendanceTime');
+    if (storedTime != null) {
+      setState(() {
+        _lastAttendanceTime = DateTime.tryParse(storedTime);
+      });
+    }
+  }
+
+  Future<void> _saveLastAttendance(DateTime time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('lastAttendanceTime', time.toIso8601String());
+    setState(() {
+      _lastAttendanceTime = time;
     });
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _loadLastAttendanceTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    final timestamp = prefs.getInt('lastAttendanceTime');
-    if (timestamp != null && mounted) {
-      setState(() {
-        _lastAttendanceTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
-      });
-    }
-  }
-
-
-  Future<void> _saveLastAttendanceTime(DateTime time) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('lastAttendanceTime', time.millisecondsSinceEpoch);
-  }
-
-
-  // --- Modifikasi Navigasi ke Absen ---
-  void _goToAbsenScreen() async {
-    // Navigasi ke halaman Absen dan tunggu hasilnya
+  Future<void> _navigateToAbsensi() async {
     final result = await Navigator.pushNamed(context, AppRoutes.absensi);
 
-    // Cek hasil yang dikembalikan dari Navigator.pop() di AbsenWidget
-    if (result != null && result is DateTime && mounted) {
-      setState(() {
-        _lastAttendanceTime = result; // Update state dengan waktu absen baru
-      });
-      // Simpan waktu absen baru ke SharedPreferences
-      await _saveLastAttendanceTime(result);
+    if (result != null && result is DateTime) {
+      await _saveLastAttendance(result);
+
+      final formatted = DateFormat('HH:mm:ss').format(result);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Absensi berhasil pada $formatted')),
+      );
     }
   }
-  // --- Akhir Modifikasi Navigasi ---
+
+  String _getFormattedAttendance() {
+    if (_lastAttendanceTime == null) {
+      return "Belum ada data absensi.";
+    }
+
+    final date = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(_lastAttendanceTime!);
+    final time = DateFormat('HH:mm:ss').format(_lastAttendanceTime!);
+    return "🕒 $time — $date";
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Dashboard Absensi')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Waktu Real-time ---
-            Text(DateFormat('EEEE, dd MMMM yyyy').format(_currentTime), /* ... style ... */),
-            const SizedBox(height: 8),
-            Text(DateFormat('HH:mm:ss').format(_currentTime), /* ... style ... */),
-            const SizedBox(height: 30), // Kurangi sedikit jarak
+            const Text(
+              'Selamat Datang 👋',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 25),
 
-            // --- Tampilkan Waktu Absen Terakhir (Jika Ada) ---
-            if (_lastAttendanceTime != null) ...[
-              Card(
-                color: Colors.green.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min, // Agar Row tidak full width
-                    children: [
-                      Icon(Icons.access_time_filled, color: Colors.green.shade700, size: 20,),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Absen Masuk: ${DateFormat('HH:mm').format(_lastAttendanceTime!)}', // Format jam:menit
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.green.shade800),
-                      ),
-                    ],
-                  ),
+            // CARD JAM ABSEN
+            Card(
+              elevation: 3,
+              color: Colors.blue.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(18.0),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Absen Masuk Terakhir',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _getFormattedAttendance(),
+                      style: const TextStyle(fontSize: 15),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 30),
-            ] else ... [
-               const Text('Anda belum melakukan absensi masuk hari ini.', style: TextStyle(color: Colors.grey)),
-               const SizedBox(height: 30),
-            ],
+            ),
 
-            Text('Selamat Datang, $userName!', /* ... style ... */),
-            const SizedBox(height: 50),
+            const Spacer(),
+
+            // TOMBOL ABSENSI
             ElevatedButton.icon(
-              icon: const Icon(Icons.sensor_occupied_rounded),
-              label: const Text('Mulai Absensi'),
-              style: ElevatedButton.styleFrom( /* ... style ... */ ),
-              onPressed: _goToAbsenScreen,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: _navigateToAbsensi,
+              icon: const Icon(Icons.fingerprint, size: 28),
+              label: const Text(
+                "Mulai Absensi",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
