@@ -142,6 +142,7 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> {
         CameraWidget(
           initialMode: CameraCaptureMode.photo,
           onPictureTaken: _onPictureCaptured,
+          initialCameraType: CameraType.back, // Default ke kamera belakang
         ),
         const SizedBox(height: 50),
 

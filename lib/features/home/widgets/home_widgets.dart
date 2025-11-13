@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 import '../../../core/routes/app_routes.dart';
+import '../../../core/utils/date_formatter.dart';
 
 class HomeWidget extends StatefulWidget {
   const HomeWidget({super.key});
@@ -43,7 +43,7 @@ class _HomeWidgetState extends State<HomeWidget> {
     if (result != null && result is DateTime) {
       await _saveLastAttendance(result);
 
-      final formatted = DateFormat('HH:mm:ss').format(result);
+      final formatted = DateFormatter.formatTime(result);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Absensi berhasil pada $formatted')),
       );
@@ -55,8 +55,8 @@ class _HomeWidgetState extends State<HomeWidget> {
       return "Belum ada data absensi.";
     }
 
-    final date = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(_lastAttendanceTime!);
-    final time = DateFormat('HH:mm:ss').format(_lastAttendanceTime!);
+    final date = DateFormatter.formatFullDate(_lastAttendanceTime!);
+    final time = DateFormatter.formatTime(_lastAttendanceTime!);
     return "🕒 $time — $date";
   }
 

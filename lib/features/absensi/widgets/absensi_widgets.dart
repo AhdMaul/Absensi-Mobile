@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
 
 // Import service, widget, model, konstanta
 import '../../../services/location_service.dart';
 import '../../../config/app_constants.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../models/verification_result_model.dart';
 // Import widget baru (anak)
 import '../widgets/verify_face_widgets.dart';
@@ -37,7 +36,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
   @override
   void initState() {
     super.initState();
-    Intl.defaultLocale = 'id_ID';
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) setState(() => _currentTime = DateTime.now());
     });
@@ -101,8 +99,8 @@ class _AbsenWidgetState extends State<AbsenWidget> {
 
   // --- Callback dari FaceVerificationStep ---
   void _onFaceVerified(VerificationResultModel result, DateTime captureTime) {
-    final String formattedTime = DateFormat('HH:mm:ss').format(captureTime);
-    final String formattedDate = DateFormat('dd MMMM yyyy').format(captureTime);
+    final String formattedTime = DateFormatter.formatTime(captureTime);
+    final String formattedDate = DateFormatter.formatDate(captureTime);
 
     final finalMessage = "✅ Absensi Berhasil!\n"
         "Waktu: $formattedTime ($formattedDate)\n"
@@ -130,13 +128,9 @@ class _AbsenWidgetState extends State<AbsenWidget> {
   // --- Build Method ---
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Absensi Karyawan')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
             // --- Card Waktu Real-time ---
             Card(
               elevation: 0,
@@ -146,9 +140,9 @@ class _AbsenWidgetState extends State<AbsenWidget> {
                 padding: const EdgeInsets.symmetric(vertical: 12.0),
                 child: Column(
                   children: [
-                    Text(DateFormat('EEEE, dd MMMM yyyy').format(_currentTime)),
+                    Text(DateFormatter.formatFullDate(_currentTime)),
                     const SizedBox(height: 4),
-                    Text(DateFormat('HH:mm:ss').format(_currentTime),
+                    Text(DateFormatter.formatTime(_currentTime),
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   ],
                 ),
@@ -246,8 +240,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
                 ],
               ),
           ],
-        ),
-      ),
-    );
+        );
   }
 }

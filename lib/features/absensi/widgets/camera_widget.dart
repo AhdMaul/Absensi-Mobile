@@ -4,18 +4,21 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 enum CameraCaptureMode { photo, video }
+enum CameraType { front, back }
 
 class CameraWidget extends StatefulWidget {
   final Function(XFile? imageFile)? onPictureTaken;
   final Function(XFile? videoFile)? onVideoRecorded;
   final CameraCaptureMode initialMode;
   final int videoDurationSeconds;
+  final CameraType initialCameraType;
 
   const CameraWidget({
     this.onPictureTaken,
     this.onVideoRecorded,
     this.initialMode = CameraCaptureMode.photo,
-    this.videoDurationSeconds = 3, 
+    this.videoDurationSeconds = 3,
+    this.initialCameraType = CameraType.front,
     super.key,
   });
 
@@ -29,11 +32,14 @@ class _CameraWidgetState extends State<CameraWidget> {
   bool _isCameraInitialized = false;
   bool _isTakingPicture = false;
   bool _isRecordingVideo = false;
+  bool _isSwitchingCamera = false;
   Timer? _videoTimer;
+  late CameraType _currentCameraType;
 
   @override
   void initState() {
     super.initState();
+    _currentCameraType = widget.initialCameraType;
     if (widget.initialMode == CameraCaptureMode.photo && widget.onPictureTaken == null) {
       throw ArgumentError('onPictureTaken callback must be provided for photo mode');
     }
@@ -59,10 +65,21 @@ class _CameraWidgetState extends State<CameraWidget> {
         return;
       }
 
-      CameraDescription selectedCamera = cameras!.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.front,
-        orElse: () => cameras!.first,
-      );
+      // Pilih kamera berdasarkan _currentCameraType
+      CameraDescription selectedCamera;
+      
+      if (_currentCameraType == CameraType.front) {
+        selectedCamera = cameras!.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.front,
+          orElse: () => cameras!.first,
+        );
+      } else {
+        // Untuk kamera belakang
+        selectedCamera = cameras!.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.back,
+          orElse: () => cameras!.first,
+        );
+      }
 
       controller = CameraController(
         selectedCamera,
@@ -99,6 +116,32 @@ class _CameraWidgetState extends State<CameraWidget> {
       widget.onPictureTaken!(null);
     } finally {
        if (mounted) setState(() { _isTakingPicture = false; });
+    }
+  }
+
+  Future<void> _switchCamera() async {
+    if (_isSwitchingCamera || !_isCameraInitialized) return;
+    
+    setState(() { _isSwitchingCamera = true; });
+
+    try {
+      // Dispose controller lama
+      await controller?.dispose();
+      
+      // Switch kamera type
+      _currentCameraType = _currentCameraType == CameraType.front 
+        ? CameraType.back 
+        : CameraType.front;
+      
+      // Reset state
+      setState(() { _isCameraInitialized = false; });
+      
+      // Initialize dengan kamera yang baru
+      await _initializeCamera();
+    } catch (e) {
+      print("Error switch kamera: $e");
+    } finally {
+      if (mounted) setState(() { _isSwitchingCamera = false; });
     }
   }
 
@@ -153,9 +196,59 @@ class _CameraWidgetState extends State<CameraWidget> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AspectRatio(
-          aspectRatio: controller!.value.aspectRatio,
-          child: CameraPreview(controller!),
+        Stack(
+          children: [
+            AspectRatio(
+              aspectRatio: controller!.value.aspectRatio,
+              child: CameraPreview(controller!),
+            ),
+            // Tombol switch kamera (top-right corner)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: FloatingActionButton(
+                mini: true,
+                backgroundColor: Colors.black.withOpacity(0.6),
+                onPressed: _isSwitchingCamera ? null : _switchCamera,
+                tooltip: 'Switch ke ${_currentCameraType == CameraType.front ? 'Kamera Belakang' : 'Kamera Depan'}',
+                child: _isSwitchingCamera
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(
+                      _currentCameraType == CameraType.front 
+                        ? Icons.flip_camera_android 
+                        : Icons.flip_camera_ios,
+                      color: Colors.white,
+                    ),
+              ),
+            ),
+            // Indikator jenis kamera yang aktif
+            Positioned(
+              bottom: 12,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _currentCameraType == CameraType.front ? '🎥 Depan' : '📷 Belakang',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
