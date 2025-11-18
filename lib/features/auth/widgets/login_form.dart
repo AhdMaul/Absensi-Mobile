@@ -1,7 +1,8 @@
 // lib/features/auth/widgets/login_form.dart
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart'; // Sesuaikan path jika perlu
+import '../../../core/theme/app_colors.dart'; 
 
 class LoginForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
@@ -10,8 +11,6 @@ class LoginForm extends StatefulWidget {
   final bool isLoading;
   final String errorMessage;
   final VoidCallback onLoginPressed;
-  // final VoidCallback onRegisterTap; // Opsional jika ada halaman register
-  // final VoidCallback onFaceVerifyTap; // Opsional jika ada verifikasi wajah
 
   const LoginForm({
     super.key,
@@ -21,8 +20,6 @@ class LoginForm extends StatefulWidget {
     required this.isLoading,
     required this.errorMessage,
     required this.onLoginPressed,
-    // required this.onRegisterTap,
-    // required this.onFaceVerifyTap,
   });
 
   @override
@@ -34,7 +31,6 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    // TextFormField akan otomatis menggunakan style dari app_theme.dart
     return Form(
       key: widget.formKey,
       child: Column(
@@ -46,7 +42,7 @@ class _LoginFormState extends State<LoginForm> {
             decoration: const InputDecoration(
               labelText: 'Email Perusahaan',
               prefixIcon: Icon(Icons.alternate_email),
-              // Style (border, color, font) diambil dari app_theme.dart
+              // Style border & font otomatis diambil dari theme
             ),
             keyboardType: TextInputType.emailAddress,
             validator: (value) {
@@ -56,7 +52,7 @@ class _LoginFormState extends State<LoginForm> {
               if (!value.contains('@') || !value.contains('.')) {
                 return 'Format email tidak valid';
               }
-              return null; // Valid
+              return null;
             },
           ),
           const SizedBox(height: 16),
@@ -74,14 +70,12 @@ class _LoginFormState extends State<LoginForm> {
                       ? Icons.visibility_off_outlined
                       : Icons.visibility_outlined,
                 ),
-                // Icon color akan otomatis diatur oleh prefixIconColor di theme
                 onPressed: () {
                   setState(() {
                     _obscurePassword = !_obscurePassword;
                   });
                 },
               ),
-              // Style (border, color, font) diambil dari app_theme.dart
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -101,47 +95,59 @@ class _LoginFormState extends State<LoginForm> {
               padding: const EdgeInsets.only(bottom: 16.0),
               child: Text(
                 widget.errorMessage,
-                style: const TextStyle(color: kErrorColor),
+                style: const TextStyle(
+                  color: AppColors.error, // SUDAH DIPERBAIKI
+                  fontWeight: FontWeight.w500,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
 
           // --- Tombol Login ---
           widget.isLoading
-              ? const Center(child: CircularProgressIndicator(color: kPrimaryRed))
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.buttonBlack, // SUDAH DIPERBAIKI
+                  ),
+                )
               : ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryRed, // Warna utama
-                    foregroundColor: Colors.white, // Warna teks
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppColors.buttonBlack, // SUDAH DIPERBAIKI (Hitam)
+                    foregroundColor: Colors.white, 
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(30), // Dibuat lebih bulat (Pill shape)
                     ),
                   ),
                   onPressed: widget.onLoginPressed,
-                  child: const Text('LOGIN'),
+                  child: const Text(
+                    'Log In', // Teks disesuaikan sedikit agar lebih clean
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
           const SizedBox(height: 20),
 
-          // --- Link Tambahan (Opsional) ---
+          // --- Link Tambahan ---
           Center(
             child: Text.rich(
               TextSpan(
                 text: 'Belum punya akun? ',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: kTextColor.withOpacity(0.7),
+                      color: AppColors.textPrimary.withOpacity(0.7), // SUDAH DIPERBAIKI
                     ),
                 children: [
                   TextSpan(
                     text: 'Daftar di sini',
                     style: const TextStyle(
-                      color: kPrimaryRed,
+                      color: AppColors.buttonBlack, // Menggunakan hitam agar konsisten
                       fontWeight: FontWeight.bold,
                     ),
                     recognizer: TapGestureRecognizer()
                       ..onTap = () {
-                        // Panggil widget.onRegisterTap
-                        // Navigator.pushNamed(context, '/register');
                         ScaffoldMessenger.of(context).showSnackBar(
                            const SnackBar(content: Text('Menuju halaman daftar...')),
                         );

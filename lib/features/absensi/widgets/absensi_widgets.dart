@@ -47,23 +47,29 @@ class _AbsenWidgetState extends State<AbsenWidget> {
     super.dispose();
   }
 
-  // --- Fungsi Cek Lokasi ---
+  // --- Fungsi Cek Lokasi (YANG SUDAH DIPERBAIKI) ---
   Future<void> _checkLocation() async {
     if (!mounted) return;
+    
+    // Reset State awal
     setState(() {
       _isGettingLocation = true;
       _locationMessage = 'Mendeteksi lokasi...';
       _isLocationValid = false;
-      _showCameraStep = false; // Sembunyikan langkah 2
-      _finalAbsensiMessage = null; // Reset hasil akhir
+      _showCameraStep = false; 
+      _finalAbsensiMessage = null; 
     });
 
     try {
+      // 1. Proses Async Ambil Lokasi
       final position = await _locationService.getCurrentPosition();
       final distance = _locationService.getDistanceToOffice(position.latitude, position.longitude);
       final isValid = _locationService.isWithinOfficeRadius(distance);
 
+      // Cek mounted lagi setelah await (Wajib)
       if (!mounted) return;
+
+      // 2. Update UI Utama (Pasti Aman)
       setState(() {
         _isGettingLocation = false;
         _isLocationValid = isValid;
@@ -71,19 +77,28 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         _locationMessage = isValid
             ? '✅ Lokasi valid (${distance.toStringAsFixed(1)} m dari kantor)'
             : '❌ Lokasi tidak valid (${distance.toStringAsFixed(1)} m dari kantor).\nHarus dalam radius ${AppConstants.allowedRadiusMeters} m.';
-        _showCameraStep = isValid; // Tampilkan Langkah 2 jika lokasi valid
+        _showCameraStep = isValid; 
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isLocationValid
-              ? 'Lokasi sesuai, silakan lanjut ambil foto wajah.'
-              : _locationMessage),
-          backgroundColor: _isLocationValid ? Colors.blueAccent : Colors.orange,
-        ),
-      );
+   
+      try {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isLocationValid
+                ? 'Lokasi sesuai, silakan lanjut ambil foto wajah.'
+                : 'Lokasi kejauhan. Coba mendekat ke kantor.'),
+            backgroundColor: _isLocationValid ? Colors.blueAccent : Colors.orange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } catch (_) {
+        // Diamkan saja kalau SnackBar gagal, yang penting status teks di layar sudah benar
+      }
+
     } catch (e) {
       if (!mounted) return;
+      
       final errorMsg = 'Gagal cek lokasi: ${e.toString()}';
       setState(() {
         _isGettingLocation = false;
@@ -91,9 +106,13 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         _showCameraStep = false;
         _locationMessage = errorMsg;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
+
+      // SnackBar Error (Aman)
+      try {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+        );
+      } catch (_) {}
     }
   }
 
@@ -112,16 +131,20 @@ class _AbsenWidgetState extends State<AbsenWidget> {
       _showCameraStep = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Absensi berhasil disimpan.'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Absensi berhasil disimpan.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (_) {}
 
     // ✅ Kirim hasil waktu absensi ke HomeWidget
     Future.delayed(const Duration(seconds: 1), () {
-      Navigator.pop(context, captureTime); // <<=== Kunci utama koneksi
+      if (mounted) {
+        Navigator.pop(context, captureTime); 
+      }
     });
   }
 

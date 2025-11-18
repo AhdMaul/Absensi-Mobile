@@ -1,5 +1,5 @@
-import 'dart:convert'; // Untuk jsonEncode dan jsonDecode
-import 'dart:io'; // Untuk HttpStatus
+import 'dart:convert'; 
+import 'dart:io'; 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart'; // Untuk token
 
@@ -17,8 +17,8 @@ class ApiException implements Exception {
 
 class ApiBase {
   // --- Base URLs ---
-  static const String _baseUrlExpress = "https://eshrm-backend.jcode.my.id/api";
-  static const String _baseUrlFastAPI = "https://api.jcode.my.id/api";
+  static const String _baseUrlExpress = "http://192.168.1.90:5000/api";
+  static const String _baseUrlFastAPI = "http://192.168.1.90:8000/api";
 
   // --- Timeout ---
   static const Duration _timeoutDuration = Duration(seconds: 15); // Timeout default 15 detik

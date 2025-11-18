@@ -1,84 +1,59 @@
 // lib/core/theme/app_theme.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'app_colors.dart'; 
+import 'app_colors.dart'; // <-- Pastikan import ini ada
 
 class AppTheme {
+  // Kita buat getter static agar mudah dipanggil
   static ThemeData get lightTheme {
-    final baseTheme = ThemeData.light(useMaterial3: true);
-
-    return baseTheme.copyWith(
-      primaryColor: kPrimaryRed,
-      scaffoldBackgroundColor: kBackgroundColor,
-
-      textTheme: GoogleFonts.getTextTheme('Outfit', baseTheme.textTheme).apply(
-        bodyColor: kTextColor,
-        displayColor: kTextColor,
-      ),
-
+    return ThemeData(
+      useMaterial3: true,
+      
+      // Mengatur warna dasar aplikasi
       colorScheme: ColorScheme.fromSeed(
-        seedColor: kPrimaryRed,
-        primary: kPrimaryRed,
-        secondary: kDarkRed,
-        surface: kBackgroundColor, 
-        error: kErrorColor,
-        brightness: Brightness.light,
+        seedColor: AppColors.primaryButton, // Menggunakan Orange sebagai seed
+        primary: AppColors.primaryButton,
+        secondary: AppColors.textPrimary,
+        error: AppColors.error,
+        surface: Colors.white,
       ),
+      
+      scaffoldBackgroundColor: Colors.white, // Default putih, nanti ditimpa gradient
 
-      // Tema untuk Input Field (TextFormField)
+      // Mengatur Font Default ke Hanken Grotesk
+      textTheme: GoogleFonts.hankenGroteskTextTheme(),
+      
+      // Style Input Field Global (Cadangan jika widget custom gagal)
       inputDecorationTheme: InputDecorationTheme(
-        // Font 'Satoshi' akan otomatis terpakai dari 'textTheme' di atas
-        labelStyle: TextStyle(color: kDarkRed.withOpacity(0.8)), 
-        floatingLabelStyle: const TextStyle( 
-          color: kPrimaryRed,
-          fontWeight: FontWeight.w600,
+        filled: true,
+        fillColor: AppColors.inputFill,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.inputBorder),
         ),
-        
-        // --- PERBAIKAN DEPREKASI 'MaterialState' ---
-        prefixIconColor: WidgetStateColor.resolveWith((states) { 
-          if (states.contains(WidgetState.focused)) { 
-            return kPrimaryRed; 
-          }
-          if (states.contains(WidgetState.error)) { 
-            return kErrorColor;
-          }
-          return kInputGray; 
-        }),
-        
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: BorderSide(color: kInputGray.withOpacity(0.7), width: 1.0),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.inputBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: kPrimaryRed, width: 2.0),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primaryButton, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: kErrorColor, width: 1.0),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: kErrorColor, width: 2.0),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.error),
         ),
       ),
 
-      // Tema untuk seleksi teks
-      textSelectionTheme: TextSelectionThemeData(
-        selectionColor: kPrimaryRed.withOpacity(0.25),
-        selectionHandleColor: kPrimaryRed,
-        cursorColor: kPrimaryRed,
-      ),
-
-      // Tema untuk AppBar
-      appBarTheme: baseTheme.appBarTheme.copyWith(
-        backgroundColor: kBackgroundColor,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        iconTheme: const IconThemeData(color: kDarkRed),
-        titleTextStyle: baseTheme.textTheme.titleLarge?.copyWith(
-          color: kDarkRed,
-          fontWeight: FontWeight.w600,
+      // Style Button Global
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryButton,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
         ),
       ),
     );

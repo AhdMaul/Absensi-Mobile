@@ -1,47 +1,56 @@
 // lib/features/auth/widgets/login_header.dart
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart'; // Sesuaikan path jika perlu
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/app_colors.dart';
 
 class LoginHeader extends StatelessWidget {
   const LoginHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // GANTI DENGAN LOGO JIKA ADA
-        // Contoh jika pakai logo:
-        // SvgPicture.asset('assets/logo/jcode_logo.svg', height: 50),
+        // 1. Title
+        Text(
+          'ATTENDIFY',
+          style: GoogleFonts.hankenGrotesk(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary, // KEMBALI KE HITAM/GELAP
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: 8),
         
-        // Contoh jika pakai Icon:
-        const Icon(
-          Icons.fingerprint, // Icon absensi
-          size: 50,
-          color: kPrimaryRed,
-        ),
-        const SizedBox(height: 20),
+        // 2. Tagline
         Text(
-          'Selamat Datang di',
-          // Font Satoshi akan otomatis diterapkan dari theme
-          style: textTheme.headlineSmall?.copyWith(
-            color: kTextColor.withOpacity(0.8),
+          'Smart, Simple, Secure Attendance.',
+          style: GoogleFonts.hankenGrotesk(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary, // ABU-ABU GELAP
           ),
+          textAlign: TextAlign.center,
         ),
-        Text(
-          'ESHRM Absensi',
-          style: textTheme.headlineMedium?.copyWith(
-            color: kDarkRed, // Warna merah tua
-            fontWeight: FontWeight.w700, // Font Satoshi Bold (jika ada)
+
+        const SizedBox(height: 40),
+
+        // 3. Vector Image
+        Container(
+          // Shadow dikurangi agar tidak terlalu kotor di background putih
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
-        ),
-        Text(
-          'by JCode Team',
-          style: textTheme.bodyMedium?.copyWith(
-            color: kTextColor.withOpacity(0.6),
-            fontStyle: FontStyle.italic,
+          child: Image.asset(
+            'assets/images/vector.png', 
+            height: 300,
+            fit: BoxFit.contain,
           ),
         ),
       ],
