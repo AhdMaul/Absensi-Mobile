@@ -80,12 +80,9 @@ class LoginScreen extends StatelessWidget {
               children: [
                 const Spacer(flex: 1),
 
-                // Header (Sudah diperbaiki jadi teks gelap)
                 const LoginHeader(),
 
-                const Spacer(flex: 3),
-
-                // --- Tombol Get Started Hitam ---
+                const Spacer(flex: 3), // --- Tombol Get Started Hitam ---
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,

@@ -8,7 +8,7 @@ class AppRoutes {
   static const String login = '/login';
   static const String absensi = '/absensi';
   static const String home = '/home';
-  static const String recognize = '/recognize'; // Add other route names here
+  static const String recognize = '/recognize';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {

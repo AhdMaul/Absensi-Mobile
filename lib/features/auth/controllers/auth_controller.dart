@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../services/auth_service.dart';
-import '../../../core/routes/app_routes.dart'; // Pastikan path ini sesuai dengan struktur projectmu
+import '../../../core/routes/app_routes.dart'; 
 
 class AuthController extends GetxController {
   final AuthService _authService = AuthService();
@@ -31,10 +31,9 @@ class AuthController extends GetxController {
 
       // 4. Cek response sukses
       if (response.success) {
-        // Navigate to home and remove login from stack
-        Get.offNamed(AppRoutes.home);
-        Get.snackbar('Berhasil', response.message,
-            backgroundColor: Colors.green, colorText: Colors.white);
+        // Navigate to home - SNACKBAR DIHAPUS dari sini
+        // Akan ditampilkan di HomeScreen setelah build selesai
+        Get.offNamed(AppRoutes.home, arguments: {'showWelcome': true});
       } else {
         // Tampilkan pesan error dari API
         errorMessage.value = response.message;

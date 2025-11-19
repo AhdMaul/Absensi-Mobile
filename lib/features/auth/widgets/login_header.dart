@@ -37,16 +37,6 @@ class LoginHeader extends StatelessWidget {
 
         // 3. Vector Image
         Container(
-          // Shadow dikurangi agar tidak terlalu kotor di background putih
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 20,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
           child: Image.asset(
             'assets/images/vector.png', 
             height: 300,
