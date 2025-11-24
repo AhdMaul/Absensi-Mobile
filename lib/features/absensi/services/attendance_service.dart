@@ -1,37 +1,62 @@
+import 'package:intl/intl.dart';
 import '../../../services/api_base.dart';
-import '../models/attendance_model.dart';
 
 class AttendanceService {
   final ApiBase _apiBase = ApiBase.instance;
 
-  Future<Map<String, dynamic>> submitAttendance(AttendanceModel data) async {
+  // Fungsi untuk kirim absen
+  Future<Map<String, dynamic>> submitAttendance({
+    required double latitude,
+    required double longitude,
+    String status = 'present',
+    required DateTime timestampForLog,
+  }) async {
     try {
-      final response = await _apiBase.post(
-        '/attendance', 
-        body: data.toJson(),
-        useExpress: true,
+      // PERBAIKAN: Gunakan '/attendance' saja.
+      // Backend route: router.post('/attendance', ...)
+      // Asumsi server mount di /api, jadi total: /api/attendance
+      const String endpoint = '/attendance'; 
+
+      final Map<String, dynamic> body = {
+        'latitude': latitude,
+        'longitude': longitude,
+        'status': status,
+      };
+
+      print(">>> [Flutter] Kirim Absen ke: $endpoint");
+      print(">>> [Flutter] Data: $body");
+      
+      final responseBody = await _apiBase.post(
+        endpoint,
+        body: body,
+        useExpress: true, 
       );
-      return response;
+
+      return responseBody;
+
     } on ApiException catch (e) {
-      print("Submit attendance failed: ${e.message}");
-      rethrow;
+      // Tangkap pesan dari backend (misal: "Anda sudah absen pulang")
+      rethrow; // Teruskan error ini ke Widget agar bisa ditampilkan di SnackBar
     } catch (e) {
-      print("Unexpected error on submitAttendance: $e");
-      throw 'Terjadi kesalahan tidak terduga.';
+      print("Error Tak Terduga: $e");
+      throw ApiException("Terjadi kesalahan sistem saat absen.");
     }
   }
 
-  Future<List<AttendanceModel>> fetchUserAttendances(int userId) async {
+  // Fungsi untuk ambil history
+  Future<List<dynamic>> getHistory() async {
     try {
-      final res = await _apiBase.get('/attendance/$userId');
-      final List data = res['data'] ?? [];
-      return data.map((e) => AttendanceModel.fromJson(e)).toList();
-    } on ApiException catch (e) {
-      print("Fetch attendance failed: ${e.message}");
-      rethrow;
+      const String endpoint = '/attendance'; 
+      
+      final response = await _apiBase.get(
+        endpoint,
+        useExpress: true,
+      );
+
+      return response['attendances'] ?? [];
     } catch (e) {
-      print("Unexpected error on fetchUserAttendances: $e");
-      throw 'Terjadi kesalahan saat mengambil data absensi.';
+      print("Gagal ambil history: $e");
+      return [];
     }
   }
 }

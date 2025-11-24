@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// Import service, widget, model, konstanta
 import '../../../services/location_service.dart';
 import '../../../config/app_constants.dart';
-import '../../../core/utils/date_formatter.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../services/api_base.dart'; // Import ApiException
 import '../models/verification_result_model.dart';
-// Import widget baru (anak)
-import '../widgets/verify_face_widgets.dart';
+import 'verify_face_widgets.dart'; 
+import '../services/attendance_service.dart';
 
 class AbsenWidget extends StatefulWidget {
   const AbsenWidget({super.key});
@@ -17,27 +21,29 @@ class AbsenWidget extends StatefulWidget {
 }
 
 class _AbsenWidgetState extends State<AbsenWidget> {
-  // --- Services ---
   final _locationService = LocationService();
+  final _attendanceService = AttendanceService();
 
-  // --- State UI ---
   bool _isGettingLocation = false;
   bool _isLocationValid = false;
-  String _locationMessage = 'Tekan tombol untuk cek lokasi';
+  String _locationMessage = 'Mulai cek lokasi Anda';
   double _distanceToOffice = -1.0;
-  bool _showCameraStep = false; // Tampilkan Langkah 2 (wajah) jika lokasi valid
-  String? _finalAbsensiMessage; // Pesan hasil absensi akhir (sukses/gagal)
-  Color? _finalAbsensiColor; // Warna card hasil akhir
+  
+  bool _showCameraStep = false;
+  
+  String? _finalAbsensiMessage;
+  Color? _finalAbsensiColor;
+  Position? _currentPosition;
 
-  // --- State Waktu ---
   DateTime _currentTime = DateTime.now();
   Timer? _clockTimer;
 
   @override
   void initState() {
     super.initState();
+    Intl.defaultLocale = 'id_ID';
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) setState(() => _currentTime = DateTime.now());
+       if (mounted) setState(() => _currentTime = DateTime.now());
     });
   }
 
@@ -47,222 +53,278 @@ class _AbsenWidgetState extends State<AbsenWidget> {
     super.dispose();
   }
 
-  // --- Fungsi Cek Lokasi (YANG SUDAH DIPERBAIKI) ---
   Future<void> _checkLocation() async {
     if (!mounted) return;
-    
-    // Reset State awal
     setState(() {
       _isGettingLocation = true;
-      _locationMessage = 'Mendeteksi lokasi...';
+      _locationMessage = 'Sedang mendeteksi lokasi...';
       _isLocationValid = false;
-      _showCameraStep = false; 
-      _finalAbsensiMessage = null; 
+      _showCameraStep = false;
+      _finalAbsensiMessage = null;
+      _currentPosition = null;
     });
 
     try {
-      // 1. Proses Async Ambil Lokasi
       final position = await _locationService.getCurrentPosition();
-      final distance = _locationService.getDistanceToOffice(position.latitude, position.longitude);
+      final distance = _locationService.getDistanceToOffice(
+          position.latitude, position.longitude);
       final isValid = _locationService.isWithinOfficeRadius(distance);
 
-      // Cek mounted lagi setelah await (Wajib)
       if (!mounted) return;
-
-      // 2. Update UI Utama (Pasti Aman)
       setState(() {
         _isGettingLocation = false;
         _isLocationValid = isValid;
         _distanceToOffice = distance;
-        _locationMessage = isValid
-            ? '✅ Lokasi valid (${distance.toStringAsFixed(1)} m dari kantor)'
-            : '❌ Lokasi tidak valid (${distance.toStringAsFixed(1)} m dari kantor).\nHarus dalam radius ${AppConstants.allowedRadiusMeters} m.';
-        _showCameraStep = isValid; 
+        _currentPosition = position;
+        
+        if (isValid) {
+          _locationMessage = 'Lokasi Valid (${distance.toStringAsFixed(0)}m)';
+          _showCameraStep = true;
+        } else {
+          _locationMessage = 'Lokasi Jauh (${distance.toStringAsFixed(0)}m).\nMax radius: ${AppConstants.allowedRadiusMeters}m';
+          _showCameraStep = false;
+        }
       });
-
-   
-      try {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isLocationValid
-                ? 'Lokasi sesuai, silakan lanjut ambil foto wajah.'
-                : 'Lokasi kejauhan. Coba mendekat ke kantor.'),
-            backgroundColor: _isLocationValid ? Colors.blueAccent : Colors.orange,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      } catch (_) {
-        // Diamkan saja kalau SnackBar gagal, yang penting status teks di layar sudah benar
-      }
 
     } catch (e) {
       if (!mounted) return;
-      
-      final errorMsg = 'Gagal cek lokasi: ${e.toString()}';
       setState(() {
         _isGettingLocation = false;
-        _isLocationValid = false;
-        _showCameraStep = false;
-        _locationMessage = errorMsg;
+        _locationMessage = 'Gagal deteksi lokasi. Pastikan GPS aktif.';
       });
-
-      // SnackBar Error (Aman)
-      try {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-        );
-      } catch (_) {}
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.error),
+      );
     }
   }
 
-  // --- Callback dari FaceVerificationStep ---
   void _onFaceVerified(VerificationResultModel result, DateTime captureTime) {
-    final String formattedTime = DateFormatter.formatTime(captureTime);
-    final String formattedDate = DateFormatter.formatDate(captureTime);
-
-    final finalMessage = "✅ Absensi Berhasil!\n"
-        "Waktu: $formattedTime ($formattedDate)\n"
-        "Lokasi: Valid, Wajah: Terverifikasi.";
+    final String formattedTime = DateFormat('HH:mm').format(captureTime);
 
     setState(() {
-      _finalAbsensiMessage = finalMessage;
-      _finalAbsensiColor = Colors.green;
+      _finalAbsensiMessage = "Absensi Berhasil!\nPukul $formattedTime";
+      _finalAbsensiColor = AppColors.neonGreen;
       _showCameraStep = false;
     });
 
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Absensi berhasil disimpan.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (_) {}
+    // Kirim data ke Backend
+    _sendAttendanceData(captureTime);
 
-    // ✅ Kirim hasil waktu absensi ke HomeWidget
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pop(context, captureTime); 
       }
     });
   }
 
-  // --- Build Method ---
+  // --- FUNGSI KIRIM DATA ABSENSI ---
+  Future<void> _sendAttendanceData(DateTime captureTime) async {
+    if (_currentPosition != null) {
+      try {
+        // Panggil service (userId & timestamp otomatis dihandle backend)
+        final response = await _attendanceService.submitAttendance(
+          latitude: _currentPosition!.latitude,
+          longitude: _currentPosition!.longitude,
+          status: 'present',
+          timestampForLog: captureTime,
+        );
+        
+        print("Response Backend: ${response['message']}");
+        
+        if (mounted && response['message'] != null) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text(response['message']), backgroundColor: Colors.green),
+           );
+        }
+
+      } on ApiException catch (e) {
+        // INI MENANGKAP PESAN ERROR DARI BACKEND (Misal: Sudah absen pulang)
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.message), // Tampilkan pesan asli backend
+              backgroundColor: Colors.orange
+            ),
+          );
+        }
+      } catch (e) {
+        print("Error Lain: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal sinkronisasi data absensi'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-            // --- Card Waktu Real-time ---
-            Card(
-              elevation: 0,
-              color: Colors.blue.shade50,
-              margin: const EdgeInsets.only(bottom: 20),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
+        Center(
+          child: Column(
+            children: [
+              Text(
+                DateFormat('HH:mm').format(_currentTime),
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 56, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1.0,
+                ),
+              ),
+              Text(
+                DateFormat('EEEE, d MMMM yyyy').format(_currentTime),
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        if (_finalAbsensiMessage != null)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.neonGreen, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.neonGreen.withValues(alpha: 0.2),
+                  blurRadius: 20, offset: const Offset(0, 10),
+                )
+              ],
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: AppColors.neonGreen, size: 72),
+                const SizedBox(height: 16),
+                Text(
+                  _finalAbsensiMessage!,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Mengalihkan ke beranda...",
+                  style: GoogleFonts.hankenGrotesk(fontSize: 13, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          )
+        else
+          Column(
+            children: [
+              _buildStepCard(
+                isActive: true,
+                isCompleted: _isLocationValid,
+                icon: Icons.location_on_rounded,
+                title: "Deteksi Lokasi",
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(DateFormatter.formatFullDate(_currentTime)),
-                    const SizedBox(height: 4),
-                    Text(DateFormatter.formatTime(_currentTime),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _locationMessage,
+                            style: GoogleFonts.hankenGrotesk(
+                              color: _isLocationValid ? AppColors.neonGreen : (_distanceToOffice > 0 ? AppColors.error : AppColors.textSecondary),
+                              fontWeight: FontWeight.w600, fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        if (_isGettingLocation)
+                          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                      ],
+                    ),
+                    if (!_isLocationValid && !_isGettingLocation)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.buttonBlack,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                            ),
+                            onPressed: _checkLocation,
+                            child: Text("Cek Lokasi Saya", style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-            ),
-
-            // --- Tampilkan Hasil Absensi Akhir (jika sudah ada) ---
-            if (_finalAbsensiMessage != null)
-              Card(
-                color: _finalAbsensiColor?.withOpacity(0.1) ?? Colors.grey.shade100,
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 20),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: _finalAbsensiColor ?? Colors.green,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _finalAbsensiMessage!,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: _finalAbsensiColor ?? Colors.green,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+              const SizedBox(height: 16),
+              AnimatedOpacity(
+                opacity: _showCameraStep ? 1.0 : 0.4,
+                duration: const Duration(milliseconds: 400),
+                child: IgnorePointer(
+                  ignoring: !_showCameraStep,
+                  child: _buildStepCard(
+                    isActive: _showCameraStep,
+                    isCompleted: false,
+                    icon: Icons.face_rounded,
+                    title: "Verifikasi Wajah",
+                    child: _showCameraStep
+                        ? FaceVerificationStep(onVerificationSuccess: _onFaceVerified)
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              "Selesaikan deteksi lokasi terlebih dahulu.",
+                              style: GoogleFonts.hankenGrotesk(fontSize: 13, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                            ),
+                          ),
                   ),
                 ),
-              )
-            else
-              Column(
-                children: [
-                  // --- Card Lokasi (Langkah 1) ---
-                  Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Langkah 1: Validasi Lokasi Anda',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 15),
-                          Row(
-                            children: [
-                              Icon(
-                                _isLocationValid ? Icons.check_circle : Icons.location_on_outlined,
-                                color: _isLocationValid
-                                    ? Colors.green
-                                    : (_distanceToOffice == -1.0 ? Colors.grey : Colors.red),
-                                size: 28,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(child: Text(_locationMessage)),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          _isGettingLocation
-                              ? const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 10.0),
-                                  child: LinearProgressIndicator(),
-                                )
-                              : ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('Validasi Lokasi Saya'),
-                                  onPressed: _checkLocation,
-                                ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // --- Bagian Verifikasi Wajah (Langkah 2) ---
-                  AnimatedOpacity(
-                    opacity: _showCameraStep ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 500),
-                    child: Visibility(
-                      visible: _showCameraStep,
-                      child: FaceVerificationStep(
-                        onVerificationSuccess: _onFaceVerified,
-                      ),
-                    ),
-                  ),
-                ],
               ),
-          ],
-        );
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStepCard({required bool isActive, required bool isCompleted, required IconData icon, required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isCompleted ? AppColors.neonGreen : (isActive ? AppColors.textPrimary : Colors.grey.shade200),
+          width: isActive || isCompleted ? 1.5 : 1,
+        ),
+        boxShadow: isActive ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 4))] : [],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isCompleted ? AppColors.neonGreen.withValues(alpha: 0.1) : Colors.grey.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(isCompleted ? Icons.check_rounded : icon, color: isCompleted ? AppColors.neonGreen : AppColors.textPrimary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(title, style: GoogleFonts.hankenGrotesk(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
   }
 }

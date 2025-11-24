@@ -13,117 +13,193 @@ class LoginBottomSheet extends StatefulWidget {
   State<LoginBottomSheet> createState() => _LoginBottomSheetState();
 }
 
-class _LoginBottomSheetState extends State<LoginBottomSheet> {
+class _LoginBottomSheetState extends State<LoginBottomSheet>
+    with SingleTickerProviderStateMixin {
   bool _obscurePassword = true;
-
-  // Mengambil controller yang sudah ada di memory
   final controller = Get.find<AuthController>();
+
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Padding bottom mengikuti tinggi keyboard agar form tidak tertutup
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(24, 32, 24, bottomPadding + 24),
+      padding: EdgeInsets.fromLTRB(24, 12, 24, bottomPadding + 24),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)), // Rounded Top
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: SingleChildScrollView(
         child: Form(
           key: controller.formKey,
           child: Column(
-            mainAxisSize: MainAxisSize.min, // Agar tinggi menyesuaikan konten
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Indikator geser kecil di atas (Opsional, aesthetic)
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
+              // 1. Drag Handle
+              _buildAnimatedItem(
+                index: 0,
+                child: Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
 
-              // Judul di dalam Sheet
-              Text(
-                'Welcome Back',
-                style: GoogleFonts.hankenGrotesk(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+              // 2. Title
+              _buildAnimatedItem(
+                index: 1,
+                child: Text(
+                  'Welcome Back!',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              _buildAnimatedItem(
+                index: 2,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 32),
+                  child: Text(
+                    'Please enter your details to continue.',
+                    style: GoogleFonts.hankenGrotesk(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
 
-              // --- Input Email ---
-              _buildInput(
-                controller: controller.emailController,
-                label: 'Email Address',
-                icon: Icons.email_outlined,
-                inputType: TextInputType.emailAddress,
+              // 3. Email Input
+              _buildAnimatedItem(
+                index: 3,
+                child: _buildInput(
+                  controller: controller.emailController,
+                  label: 'Company Email',
+                  icon: Icons.alternate_email_rounded,
+                  inputType: TextInputType.emailAddress,
+                ),
               ),
               const SizedBox(height: 16),
 
-              // --- Input Password ---
-              _buildInput(
-                controller: controller.passwordController,
-                label: 'Password',
-                icon: Icons.lock_outline,
-                isPassword: true,
-                obscureText: _obscurePassword,
-                onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
+              // 4. Password Input
+              _buildAnimatedItem(
+                index: 4,
+                child: _buildInput(
+                  controller: controller.passwordController,
+                  label: 'Password',
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: true,
+                  obscureText: _obscurePassword,
+                  onTogglePassword: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-              // --- Error Message (Reactive) ---
-              Obx(() => controller.errorMessage.value.isNotEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Text(
-                        controller.errorMessage.value,
-                        style: GoogleFonts.hankenGrotesk(
-                            color: Colors.redAccent, fontSize: 13),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : const SizedBox.shrink()),
-
-              // --- Tombol Submit (di dalam Sheet) ---
-              Obx(() => ElevatedButton(
+              // 6. Login Button
+              _buildAnimatedItem(
+                index: 6,
+                child: Obx(
+                  () => ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryButton, // Orange Solid
+                      backgroundColor: AppColors.buttonBlack,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    onPressed: controller.isLoading.value ? null : controller.login,
+                    onPressed: controller.isLoading.value
+                        ? null
+                        // --- PERBAIKAN DI SINI (Hapus 'context') ---
+                        : () => controller.login(),
                     child: controller.isLoading.value
                         ? const SizedBox(
-                            height: 24, width: 24,
+                            height: 20,
+                            width: 20,
                             child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
                         : Text(
-                            'Log in',
+                            'Log In',
                             style: GoogleFonts.hankenGrotesk(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                  )),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAnimatedItem({required int index, required Widget child}) {
+    final double beginInterval = index * 0.1;
+    final double endInterval = beginInterval + 0.4;
+
+    final clampedBegin = beginInterval.clamp(0.0, 1.0);
+    final clampedEnd = endInterval.clamp(0.0, 1.0);
+
+    final animation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Interval(
+              clampedBegin,
+              clampedEnd,
+              curve: Curves.easeOutBack,
+            ),
+          ),
+        );
+
+    final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(clampedBegin, clampedEnd, curve: Curves.easeIn),
+      ),
+    );
+
+    return FadeTransition(
+      opacity: fadeAnimation,
+      child: SlideTransition(position: animation, child: child),
     );
   }
 
@@ -138,28 +214,39 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F6F8), // Abu sangat muda agar kontras di atas putih
+        color: const Color(0xFFF5F6F8),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Colors.transparent),
       ),
       child: TextFormField(
         controller: controller,
         obscureText: obscureText,
         keyboardType: inputType,
         style: GoogleFonts.hankenGrotesk(
-          fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
         decoration: InputDecoration(
           hintText: label,
           hintStyle: GoogleFonts.hankenGrotesk(color: Colors.grey.shade400),
-          prefixIcon: Icon(icon, color: Colors.grey.shade500),
+          prefixIcon: Icon(icon, color: Colors.grey.shade500, size: 20),
           suffixIcon: isPassword
               ? IconButton(
-                  icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                  icon: Icon(
+                    obscureText
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
                   onPressed: onTogglePassword,
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
         ),
       ),
     );

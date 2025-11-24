@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../features/auth/screens/login_screens.dart';
 import '../../features/absensi/screens/absensi_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/home/screens/history_screen.dart';
 // Import other screens here
 
 class AppRoutes {
@@ -9,12 +10,14 @@ class AppRoutes {
   static const String absensi = '/absensi';
   static const String home = '/home';
   static const String recognize = '/recognize';
+  static const String history = '/history';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       login: (context) => const LoginScreen(),
       absensi: (context) => const AbsensiScreen(),
       home: (context) => const HomeScreen(),
+      history: (context) => const HistoryScreen(),
       //recognize: (context) =>
     };
   }

@@ -1,4 +1,3 @@
-// lib/features/auth/widgets/login_header.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
@@ -10,36 +9,30 @@ class LoginHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 1. Title
         Text(
           'ATTENDIFY',
           style: GoogleFonts.hankenGrotesk(
             fontSize: 32,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary, // KEMBALI KE HITAM/GELAP
+            fontWeight: FontWeight.w900,
+            color: AppColors.textPrimary,
             letterSpacing: 1.0,
           ),
         ),
         const SizedBox(height: 8),
-        
-        // 2. Tagline
         Text(
           'Smart, Simple, Secure Attendance.',
           style: GoogleFonts.hankenGrotesk(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary, // ABU-ABU GELAP
+            color: AppColors.textSecondary,
           ),
           textAlign: TextAlign.center,
         ),
-
         const SizedBox(height: 40),
-
-        // 3. Vector Image
         Container(
           child: Image.asset(
-            'assets/images/vector.png', 
-            height: 300,
+            'assets/images/vector.png',
+            height: 280, // Sedikit disesuaikan
             fit: BoxFit.contain,
           ),
         ),

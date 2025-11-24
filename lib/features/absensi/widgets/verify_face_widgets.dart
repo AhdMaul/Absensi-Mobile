@@ -1,6 +1,11 @@
+// lib/features/absensi/widgets/verify_face_widgets.dart
+
 import 'dart:async';
+import 'dart:ui' as ui; // IMPORT WAJIB UNTUK PATH METRICS
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/app_colors.dart';
 
 import '../services/face_recognition_service.dart';
 import 'camera_widget.dart';
@@ -18,195 +23,329 @@ class FaceVerificationStep extends StatefulWidget {
   State<FaceVerificationStep> createState() => _FaceVerificationStepState();
 }
 
-class _FaceVerificationStepState extends State<FaceVerificationStep> {
+class _FaceVerificationStepState extends State<FaceVerificationStep> with TickerProviderStateMixin {
   final _faceService = FaceRecognitionService();
-  bool _isLoadingVerification = false;
-  VerificationResultModel? _verificationResult;
-  String _verificationMessage = '';
-  String _errorMessage = '';
-  XFile? _lastCapturedImage;
+  final GlobalKey _cameraKey = GlobalKey(); 
 
-  Timer? _retryTimer;
+  bool _isLoadingVerification = false;
+  String _statusMessage = "Posisikan wajah di dalam area";
+  Color _statusColor = Colors.white;
+  
+  // Countdown State
+  int _countdown = 3;
+  Timer? _timer;
+  bool _isCameraReady = false;
+
+  // Animation Controllers
+  late AnimationController _breathingController; 
+  late AnimationController _scanController;      
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _breathingController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _scanController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
 
   @override
   void dispose() {
-    _cancelRetryTimer();
+    _timer?.cancel();
+    _breathingController.dispose();
+    _scanController.dispose();
     super.dispose();
   }
 
-  void _onPictureCaptured(XFile? imageFile) {
-    _cancelRetryTimer();
-    if (imageFile != null) {
+  void _onCameraReady(bool isReady) {
+    if (isReady && mounted) {
       setState(() {
-        _lastCapturedImage = imageFile;
-        _verificationResult = null;
-        _verificationMessage = '';
-        _errorMessage = '';
+        _isCameraReady = true;
+        _startCountdown();
       });
-      _handleVerification(imageFile);
-    } else {
-      if (!mounted) return;
-      setState(() { _errorMessage = "Gagal mengambil gambar. Coba lagi."; });
     }
   }
 
-  Future<void> _handleVerification(XFile imageToVerify, {bool isRetry = false}) async {
-    if (!mounted) return;
-    setState(() { _isLoadingVerification = true; });
+  void _startCountdown() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_countdown > 1) {
+          _countdown--;
+          _statusMessage = "Tahan posisi... $_countdown";
+        } else {
+          _countdown = 0;
+          _statusMessage = "Memproses...";
+          timer.cancel();
+          _triggerCapture();
+        }
+      });
+    });
+  }
 
-    if (!isRetry) _cancelRetryTimer();
+  void _triggerCapture() {
+    final state = _cameraKey.currentState;
+    // ignore: invalid_use_of_protected_member
+    (state as dynamic).takePicture(); 
+  }
+
+  void _onPictureCaptured(XFile? imageFile) {
+    if (imageFile != null) {
+      _handleVerification(imageFile);
+    } else {
+      _resetProcess("Gagal mengambil foto.", isError: true);
+    }
+  }
+
+  Future<void> _handleVerification(XFile imageToVerify) async {
+    setState(() => _isLoadingVerification = true);
 
     try {
       final result = await _faceService.verifyFace(imageToVerify);
-      if (!mounted) return;
-
-      String message;
-      Color snackbarColor;
-
+      
       if (result.verified) {
-        DateTime successTime = DateTime.now();
-        message = "✅ Wajah Terverifikasi!";
-        snackbarColor = Colors.green;
-        _cancelRetryTimer();
-        widget.onVerificationSuccess(result, successTime);
-
+        _breathingController.stop(); 
+        _scanController.stop();
+        widget.onVerificationSuccess(result, DateTime.now());
       } else {
-        message = "⚠️ Wajah tidak dikenali. ${result.message}";
-        snackbarColor = Colors.orange;
-        _startRetryTimer(imageToVerify); 
+        _resetProcess("Wajah tidak cocok. Coba lagi.", isError: true);
       }
-
-      setState(() {
-        _isLoadingVerification = false;
-        _verificationResult = result;
-        _verificationMessage = message; 
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: snackbarColor),
-      );
-
-    } catch (e) { // Error sistem
-      if (!mounted) return;
-      final errorMsg = "Terjadi kesalahan sistem: ${e.toString()}";
-      setState(() {
-        _isLoadingVerification = false;
-        _errorMessage = errorMsg;
-        _verificationMessage = "❌ Error Verifikasi Wajah.";
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
-      _startRetryTimer(imageToVerify);
+    } catch (e) {
+      _resetProcess("Wajah tidak terdeteksi.", isError: true);
     }
   }
 
-  void _startRetryTimer(XFile imageToRetry) {
-     _cancelRetryTimer();
-     const retryDuration = Duration(seconds: 5);
-     print("Verifikasi gagal, mencoba lagi dalam ${retryDuration.inSeconds} detik...");
-     _retryTimer = Timer(retryDuration, () {
-        if (!mounted) return;
-        print("Mencoba verifikasi ulang otomatis...");
-        _handleVerification(imageToRetry, isRetry: true);
-     });
-     if(mounted) setState(() {});
-  }
-
-  void _cancelRetryTimer() {
-     if (_retryTimer?.isActive ?? false) {
-        print("Membatalkan timer auto-retry.");
-        _retryTimer!.cancel();
-     }
-     _retryTimer = null;
-     if(mounted) setState(() {});
+  void _resetProcess(String message, {bool isError = false}) {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingVerification = false;
+      _statusMessage = message;
+      _statusColor = isError ? AppColors.error : Colors.white;
+      _countdown = 3;
+    });
+    
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+           _statusMessage = "Posisikan wajah di dalam area";
+           _statusColor = Colors.white;
+        });
+        _startCountdown();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Langkah 2: Verifikasi Wajah',
-           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 10),
-        Text(
-          'Posisikan wajah Anda pada kamera lalu tekan tombol ambil foto.',
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 20),
+        Container(
+          height: 400, 
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                // FIX: Gunakan withValues
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              )
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. KAMERA
+                CameraWidget(
+                  key: _cameraKey,
+                  onCameraReady: _onCameraReady,
+                  onPictureTaken: _onPictureCaptured,
+                ),
 
-        CameraWidget(
-          initialMode: CameraCaptureMode.photo,
-          onPictureTaken: _onPictureCaptured,
-          initialCameraType: CameraType.back, // Default ke kamera belakang
-        ),
-        const SizedBox(height: 50),
+                // 2. OVERLAY CANGGIH
+                AnimatedBuilder(
+                  animation: Listenable.merge([_breathingController, _scanController]),
+                  builder: (context, child) {
+                    return CustomPaint(
+                      painter: TechFaceOverlayPainter(
+                        breathingValue: _breathingController.value,
+                        scanValue: _scanController.value,
+                        isLoading: _isLoadingVerification,
+                      ),
+                    );
+                  },
+                ),
 
-        if (_isLoadingVerification)
-          const Center(child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 24.0),
-            child: CircularProgressIndicator(),
-          )
-        )
-
-        else if (_verificationMessage.isNotEmpty)
-           Card(
-            color: (_verificationResult?.verified ?? false) ? Colors.green.shade50 : Colors.orange.shade50,
-            elevation: 2,
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Icon(
-                    (_verificationResult?.verified ?? false) ? Icons.check_circle : Icons.warning_amber_rounded,
-                    color: (_verificationResult?.verified ?? false) ? Colors.green : Colors.orange,
-                    size: 40,
+                // 3. COUNTDOWN & STATUS
+                Positioned(
+                  bottom: 30, left: 0, right: 0,
+                  child: Column(
+                    children: [
+                      if (_countdown > 0 && _isCameraReady && !_isLoadingVerification)
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            // FIX: Gunakan withValues
+                            color: Colors.black.withValues(alpha: 0.3),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1),
+                          ),
+                          child: Text(
+                            "$_countdown",
+                            style: GoogleFonts.hankenGrotesk(
+                              fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          // FIX: Gunakan withValues
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                        ),
+                        child: _isLoadingVerification
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(
+                                  width: 16, height: 16,
+                                  child: CircularProgressIndicator(color: AppColors.neonGreen, strokeWidth: 2),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  "Memverifikasi Wajah...",
+                                  style: GoogleFonts.hankenGrotesk(color: Colors.white),
+                                )
+                              ],
+                            )
+                          : Text(
+                              _statusMessage,
+                              style: GoogleFonts.hankenGrotesk(
+                                color: _statusColor, fontWeight: FontWeight.w600, letterSpacing: 0.5
+                              ),
+                            ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _verificationMessage, 
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: (_verificationResult?.verified ?? false) ? Colors.green.shade800 : Colors.orange.shade800,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (!(_verificationResult?.verified ?? true) && _lastCapturedImage != null)
-                     Padding(
-                       padding: const EdgeInsets.only(top: 16.0),
-                       child: OutlinedButton(
-                          onPressed: _isLoadingVerification ? null : () => _handleVerification(_lastCapturedImage!),
-                          child: const Text('Coba Verifikasi Ulang Wajah'),
-                       ),
-                     ),
-                  if (_retryTimer?.isActive ?? false)
-                    Padding(
-                       padding: const EdgeInsets.only(top: 8.0),
-                       child: Text(
-                          'Mencoba lagi dalam beberapa detik...',
-                          style: TextStyle(color: Colors.grey.shade600, fontStyle: FontStyle.italic),
-                       ),
-                    ),
-                ],
-              ),
+                ),
+              ],
             ),
-           )
-        else if (_errorMessage.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0),
-              child: Text(
-                _errorMessage,
-                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-            ),
+          ),
+        ),
       ],
     );
   }
+}
+
+class TechFaceOverlayPainter extends CustomPainter {
+  final double breathingValue;
+  final double scanValue;
+  final bool isLoading;
+
+  TechFaceOverlayPainter({
+    required this.breathingValue,
+    required this.scanValue,
+    required this.isLoading,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    
+    // FIX: Gunakan withValues
+    final bgPaint = Paint()..color = Colors.black.withValues(alpha: 0.7);
+    final backgroundPath = Path()..addRect(rect);
+
+    final scale = 0.98 + (breathingValue * 0.04); 
+    
+    final ovalW = size.width * 0.65 * scale;
+    final ovalH = size.height * 0.50 * scale;
+    final ovalLeft = (size.width - ovalW) / 2;
+    final ovalTop = (size.height - ovalH) / 2 - 30;
+    final faceRect = Rect.fromLTWH(ovalLeft, ovalTop, ovalW, ovalH);
+
+    final facePath = Path()..addOval(faceRect);
+
+    final maskPath = Path.combine(PathOperation.difference, backgroundPath, facePath);
+    canvas.drawPath(maskPath, bgPaint);
+
+    final outlinePaint = Paint()
+      // FIX: Gunakan withValues
+      ..color = isLoading ? AppColors.neonGreen : Colors.white.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    
+    _drawDashedPath(canvas, facePath, outlinePaint);
+
+    final cornerPaint = Paint()
+      ..color = isLoading ? AppColors.neonGreen : AppColors.neonCyan
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    final double cornerLen = 30;
+    final double gap = 20;
+
+    // Gambar sudut-sudut (Sama seperti sebelumnya)
+    canvas.drawLine(Offset(ovalLeft - gap, ovalTop - gap + cornerLen), Offset(ovalLeft - gap, ovalTop - gap), cornerPaint);
+    canvas.drawLine(Offset(ovalLeft - gap, ovalTop - gap), Offset(ovalLeft - gap + cornerLen, ovalTop - gap), cornerPaint);
+    canvas.drawLine(Offset(faceRect.right + gap - cornerLen, ovalTop - gap), Offset(faceRect.right + gap, ovalTop - gap), cornerPaint);
+    canvas.drawLine(Offset(faceRect.right + gap, ovalTop - gap), Offset(faceRect.right + gap, ovalTop - gap + cornerLen), cornerPaint);
+    canvas.drawLine(Offset(ovalLeft - gap, faceRect.bottom + gap - cornerLen), Offset(ovalLeft - gap, faceRect.bottom + gap), cornerPaint);
+    canvas.drawLine(Offset(ovalLeft - gap, faceRect.bottom + gap), Offset(ovalLeft - gap + cornerLen, faceRect.bottom + gap), cornerPaint);
+    canvas.drawLine(Offset(faceRect.right + gap, faceRect.bottom + gap - cornerLen), Offset(faceRect.right + gap, faceRect.bottom + gap), cornerPaint);
+    canvas.drawLine(Offset(faceRect.right + gap, faceRect.bottom + gap), Offset(faceRect.right + gap - cornerLen, faceRect.bottom + gap), cornerPaint);
+
+    if (!isLoading) {
+      final scanY = ovalTop + (ovalH * scanValue);
+      
+      final scanPaint = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            // FIX: Gunakan withValues
+            AppColors.neonGreen.withValues(alpha: 0),
+            AppColors.neonGreen.withValues(alpha: 0.8),
+            AppColors.neonGreen.withValues(alpha: 0),
+          ],
+        ).createShader(Rect.fromLTWH(ovalLeft, scanY, ovalW, 20));
+
+      canvas.drawRect(Rect.fromLTWH(ovalLeft, scanY, ovalW, 4), scanPaint);
+    }
+  }
+
+  // --- FUNGSI YANG DIPERBAIKI ---
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    // Menggunakan ui.PathMetrics
+    final ui.PathMetrics pathMetrics = path.computeMetrics();
+    
+    // Menggunakan ui.PathMetric
+    for (final ui.PathMetric pathMetric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < pathMetric.length) {
+        canvas.drawPath(
+          pathMetric.extractPath(distance, distance + 10), 
+          paint,
+        );
+        distance += 20; 
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
