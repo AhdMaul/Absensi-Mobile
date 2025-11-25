@@ -36,9 +36,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme, 
 
-      // Menggunakan route dari app_routes.dart (tetap kompatibel)
+      // Menggunakan GetX route system dengan bindings
       initialRoute: AppRoutes.login, 
-      routes: AppRoutes.getRoutes(),
+      getPages: AppRoutes.getPages(),
 
       // Initial binding: jalankan dependency wiring sebelum aplikasi dimulai
       initialBinding: AppBinding(),

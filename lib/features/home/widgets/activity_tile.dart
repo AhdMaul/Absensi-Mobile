@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
-import 'home_widgets.dart'; // Import untuk model ActivityItem
+import '../controllers/home_controller.dart'; // Import ActivityItem dari controller
 
 class ActivityTile extends StatelessWidget {
   final ActivityItem activity;

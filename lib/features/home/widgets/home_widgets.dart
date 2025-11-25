@@ -9,11 +9,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 // --- IMPORTS ---
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
-import 'late_attendance_alert.dart'; 
-import 'activity_tile.dart'; 
-import '../../absensi/services/attendance_service.dart'; 
+import '../controllers/home_controller.dart'; // Import ActivityItem dari sini
+import 'late_attendance_alert.dart';
+import 'activity_tile.dart';
+import '../../absensi/services/attendance_service.dart';
 
-// --- MODELS ---
+// --- MODELS (PINDAH KE CONTROLLER) ---
+// ActivityItem sudah di-define di home_controller.dart
+
 class DashboardData {
   final String userName;
   final String? todayCheckIn;
@@ -30,20 +33,6 @@ class DashboardData {
   });
 }
 
-class ActivityItem {
-  final String date;
-  final String status;
-  final String checkIn;
-  final String checkOut;
-
-  ActivityItem({
-    required this.date,
-    required this.status,
-    required this.checkIn,
-    required this.checkOut,
-  });
-}
-
 // --- WIDGET UTAMA ---
 class HomeWidget extends StatefulWidget {
   const HomeWidget({super.key});
@@ -52,31 +41,31 @@ class HomeWidget extends StatefulWidget {
   State<HomeWidget> createState() => _HomeWidgetState();
 }
 
-class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateMixin {
+class _HomeWidgetState extends State<HomeWidget>
+    with SingleTickerProviderStateMixin {
   DateTime _currentTime = DateTime.now();
   Timer? _timer;
   bool _isLoading = true;
   DashboardData _dashboardData = DashboardData();
-  
+
   final AttendanceService _attendanceService = AttendanceService();
 
   // --- ANIMASI TOMBOL ---
   late AnimationController _btnController;
   late Animation<double> _iconScaleAnimation;
-  
+
   // Warna
   final Color _actionButtonColor = const Color(0xFF00838F); // Deep Cyan
-  final Color _disabledButtonColor = Colors.grey; 
 
   @override
   void initState() {
     super.initState();
     Intl.defaultLocale = 'id_ID';
-    
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) setState(() => _currentTime = DateTime.now());
     });
-    
+
     _fetchDashboardData();
 
     // Setup Animasi (Heartbeat untuk Icon)
@@ -85,9 +74,10 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    _iconScaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _btnController, curve: Curves.easeInOut),
-    );
+    _iconScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.2,
+    ).animate(CurvedAnimation(parent: _btnController, curve: Curves.easeInOut));
   }
 
   @override
@@ -104,7 +94,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
 
       // 1. AMBIL DATA REAL
       final history = await _attendanceService.getHistory();
-      
+
       String? checkInTime;
       String? checkOutTime;
       bool isLate = false;
@@ -114,69 +104,86 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
 
       // 2. Cari absen hari ini
       final todayAbsence = history.firstWhere((item) {
-         final dateString = item['date'] ?? item['createdAt'];
-         if (dateString == null) return false;
-         final itemDate = DateTime.parse(dateString).toLocal();
-         return DateFormat('yyyy-MM-dd').format(itemDate) == todayStr;
+        final dateString = item['date'] ?? item['createdAt'];
+        if (dateString == null) return false;
+        final itemDate = DateTime.parse(dateString).toLocal();
+        return DateFormat('yyyy-MM-dd').format(itemDate) == todayStr;
       }, orElse: () => null);
 
       if (todayAbsence != null) {
         if (todayAbsence['clockIn'] != null) {
-           checkInTime = DateFormat('HH:mm').format(DateTime.parse(todayAbsence['clockIn']).toLocal());
-           
-           final clockInDt = DateTime.parse(todayAbsence['clockIn']).toLocal();
-           if (clockInDt.hour > 8 || (clockInDt.hour == 8 && clockInDt.minute > 0)) isLate = true;
+          checkInTime = DateFormat(
+            'HH:mm',
+          ).format(DateTime.parse(todayAbsence['clockIn']).toLocal());
+
+          final clockInDt = DateTime.parse(todayAbsence['clockIn']).toLocal();
+          if (clockInDt.hour > 8 ||
+              (clockInDt.hour == 8 && clockInDt.minute > 0))
+            isLate = true;
         }
         if (todayAbsence['clockOut'] != null) {
-           checkOutTime = DateFormat('HH:mm').format(DateTime.parse(todayAbsence['clockOut']).toLocal());
+          checkOutTime = DateFormat(
+            'HH:mm',
+          ).format(DateTime.parse(todayAbsence['clockOut']).toLocal());
         }
       }
 
       // 3. Mapping history
       if (history.isNotEmpty) {
         history.sort((a, b) {
-            final dateA = a['date'] ?? a['createdAt'];
-            final dateB = b['date'] ?? b['createdAt'];
-            return DateTime.parse(dateB).compareTo(DateTime.parse(dateA));
+          final dateA = a['date'] ?? a['createdAt'];
+          final dateB = b['date'] ?? b['createdAt'];
+          return DateTime.parse(dateB).compareTo(DateTime.parse(dateA));
         });
 
         activities = history.take(3).map<ActivityItem>((item) {
-           final dateString = item['date'] ?? item['createdAt'];
-           final date = DateTime.parse(dateString).toLocal();
-           
-           final inTime = item['clockIn'] != null ? DateFormat('HH:mm').format(DateTime.parse(item['clockIn']).toLocal()) : '-';
-           final outTime = item['clockOut'] != null ? DateFormat('HH:mm').format(DateTime.parse(item['clockOut']).toLocal()) : '-';
-           
-           String statusText = item['status'] == 'late' ? 'Telat' : (item['status'] == 'present' ? 'Tepat Waktu' : item['status'] ?? '-');
-           
-           return ActivityItem(
-             date: DateFormat('dd MMM').format(date),
-             status: statusText,
-             checkIn: inTime,
-             checkOut: outTime,
-           );
+          final dateString = item['date'] ?? item['createdAt'];
+          final date = DateTime.parse(dateString).toLocal();
+
+          final inTime = item['clockIn'] != null
+              ? DateFormat(
+                  'HH:mm',
+                ).format(DateTime.parse(item['clockIn']).toLocal())
+              : '-';
+          final outTime = item['clockOut'] != null
+              ? DateFormat(
+                  'HH:mm',
+                ).format(DateTime.parse(item['clockOut']).toLocal())
+              : '-';
+
+          String statusText = item['status'] == 'late'
+              ? 'Telat'
+              : (item['status'] == 'present'
+                    ? 'Tepat Waktu'
+                    : item['status'] ?? '-');
+
+          return ActivityItem(
+            date: DateFormat('dd MMM').format(date),
+            status: statusText,
+            checkIn: inTime,
+            checkOut: outTime,
+          );
         }).toList();
       }
 
       if (!mounted) return;
       setState(() {
         _dashboardData = DashboardData(
-          userName: userName, 
-          todayCheckIn: checkInTime, 
+          userName: userName,
+          todayCheckIn: checkInTime,
           todayCheckOut: checkOutTime,
           isLate: isLate,
           recentActivities: activities,
         );
         _isLoading = false;
       });
-
     } catch (e) {
       print("Error fetch dashboard: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
- // --- LOGIKA TOMBOL ABSEN ---
+  // --- LOGIKA TOMBOL ABSEN ---
   Future<void> _handleAbsensiButton() async {
     // Cek Status Absensi Hari Ini
     bool alreadyCheckedIn = _dashboardData.todayCheckIn != null;
@@ -184,33 +191,38 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
 
     // KONDISI 1: SUDAH SELESAI (Masuk & Pulang)
     if (alreadyCheckedIn && alreadyCheckedOut) {
-       // Tampilkan Pesan Soft Spoken
-       ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(
-           content: Row(
-             children: [
-               const Icon(Icons.sentiment_satisfied_alt_rounded, color: Colors.white),
-               const SizedBox(width: 12),
-               Expanded(
-                 child: Text(
-                   "Wah, kamu rajin banget! Istirahat dulu ya, lanjut lagi besok! ✨",
-                   style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500),
-                 ),
-               ),
-             ],
-           ),
-           // --- UBAH WARNA DI SINI ---
-           // Sebelumnya: AppColors.neonCyan (Terlalu terang)
-           // Sekarang: Deep Teal (Lebih tenang & profesional)
-           backgroundColor: const Color(0xFF0F766E), 
-           
-           behavior: SnackBarBehavior.floating,
-           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-           margin: const EdgeInsets.all(16),
-           duration: const Duration(seconds: 4),
-         ),
-       );
-       return; // Stop, jangan navigasi
+      // Tampilkan Pesan Soft Spoken
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(
+                Icons.sentiment_satisfied_alt_rounded,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Wah, kamu rajin banget! Istirahat dulu ya, lanjut lagi besok! ✨",
+                  style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          // --- UBAH WARNA DI SINI ---
+          // Sebelumnya: AppColors.neonCyan (Terlalu terang)
+          // Sekarang: Deep Teal (Lebih tenang & profesional)
+          backgroundColor: const Color(0xFF0F766E),
+
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return; // Stop, jangan navigasi
     }
 
     // KONDISI 2: BELUM SELESAI -> Navigasi ke halaman Absen
@@ -227,9 +239,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
       padding: const EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 40.0),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 400),
-        child: _isLoading 
-            ? _buildSkeleton()
-            : _buildContent(),
+        child: _isLoading ? _buildSkeleton() : _buildContent(),
       ),
     );
   }
@@ -238,7 +248,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
   Widget _buildContent() {
     // Tentukan Teks Tombol berdasarkan status
     String buttonText = "Absen Masuk"; // Default
-    IconData buttonIcon = Icons.face_retouching_natural; // Ikon default (Scan Wajah)
+    IconData buttonIcon =
+        Icons.face_retouching_natural; // Ikon default (Scan Wajah)
 
     if (_dashboardData.todayCheckIn != null) {
       if (_dashboardData.todayCheckOut == null) {
@@ -251,7 +262,9 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
     }
 
     // Apakah tombol harus terlihat aktif atau "selesai"
-    bool isCompleted = _dashboardData.todayCheckIn != null && _dashboardData.todayCheckOut != null;
+    bool isCompleted =
+        _dashboardData.todayCheckIn != null &&
+        _dashboardData.todayCheckOut != null;
 
     return Column(
       key: const ValueKey('content'),
@@ -284,7 +297,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
             ),
           ],
         ),
-        
+
         const SizedBox(height: 24),
 
         // 2. Alert Telat
@@ -294,10 +307,10 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 20),
         ],
-        
+
         // 3. Jam Real-time
         _buildClockCard(),
-        
+
         const SizedBox(height: 20),
 
         // 4. TOMBOL ABSENSI UTAMA (DENGAN LOGIKA BARU)
@@ -306,41 +319,45 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               // Jika sudah selesai, warnanya abu-abu biar user tau disable visual
-              backgroundColor: isCompleted ? Colors.grey.shade400 : _actionButtonColor, 
+              backgroundColor: isCompleted
+                  ? Colors.grey.shade400
+                  : _actionButtonColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 0),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: isCompleted ? 0 : 4, 
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              elevation: isCompleted ? 0 : 4,
             ),
             onPressed: _handleAbsensiButton, // Panggil fungsi logika kita
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // ANIMASI IKON (Hanya jika belum selesai)
-                isCompleted 
-                ? Icon(buttonIcon, size: 28) // Ikon diam jika selesai
-                : ScaleTransition(
-                    scale: _iconScaleAnimation,
-                    child: Icon(buttonIcon, size: 28),
-                  ),
-                
+                isCompleted
+                    ? Icon(buttonIcon, size: 28) // Ikon diam jika selesai
+                    : ScaleTransition(
+                        scale: _iconScaleAnimation,
+                        child: Icon(buttonIcon, size: 28),
+                      ),
+
                 const SizedBox(width: 12),
-                
+
                 Text(
                   buttonText,
                   style: GoogleFonts.hankenGrotesk(
-                    fontSize: 18, 
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
             ),
           ),
         ),
-        
+
         const SizedBox(height: 28),
-        
+
         // 5. Info Absen Masuk & Pulang
         Row(
           children: [
@@ -376,14 +393,19 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
             ),
             TextButton(
               onPressed: () {
-                Navigator.pushNamed(context, AppRoutes.history); 
+                Navigator.pushNamed(context, AppRoutes.history);
               },
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 backgroundColor: AppColors.neonCyan.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
               child: Text(
                 "Lihat Semua",
@@ -397,20 +419,22 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
           ],
         ),
         const SizedBox(height: 16),
-        
+
         // List Aktivitas
         _dashboardData.recentActivities.isEmpty
-        ? const Center(child: Text("Belum ada aktivitas."))
-        : ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _dashboardData.recentActivities.length,
-            itemBuilder: (context, index) {
-              return ActivityTile(activity: _dashboardData.recentActivities[index]);
-            },
-          ),
-          
-         const SizedBox(height: 20),
+            ? const Center(child: Text("Belum ada aktivitas."))
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _dashboardData.recentActivities.length,
+                itemBuilder: (context, index) {
+                  return ActivityTile(
+                    activity: _dashboardData.recentActivities[index],
+                  );
+                },
+              ),
+
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -480,7 +504,11 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
               ),
             ],
           ),
-          Icon(Icons.access_time_filled_rounded, color: AppColors.neonGreen, size: 36),
+          Icon(
+            Icons.access_time_filled_rounded,
+            color: AppColors.neonGreen,
+            size: 36,
+          ),
         ],
       ),
     );
@@ -500,12 +528,12 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
-             BoxShadow(
-               color: Colors.black.withValues(alpha: 0.03),
-               blurRadius: 10,
-               offset: const Offset(0, 4),
-             )
-          ]
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../features/auth/screens/login_screens.dart';
+import '../../features/auth/bindings/auth_binding.dart';
 import '../../features/absensi/screens/absensi_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/home/bindings/home_binding.dart';
 import '../../features/home/screens/history_screen.dart';
 // Import other screens here
 
@@ -20,6 +23,30 @@ class AppRoutes {
       history: (context) => const HistoryScreen(),
       //recognize: (context) =>
     };
+  }
+
+  // GetX named routes with bindings (recommended for GetX navigation)
+  static List<GetPage> getPages() {
+    return [
+      GetPage(
+        name: login,
+        page: () => const LoginScreen(),
+        binding: AuthBinding(),
+      ),
+      GetPage(
+        name: home,
+        page: () => const HomeScreen(),
+        binding: HomeBinding(),
+      ),
+      GetPage(
+        name: absensi,
+        page: () => const AbsensiScreen(),
+      ),
+      GetPage(
+        name: history,
+        page: () => const HistoryScreen(),
+      ),
+    ];
   }
 
   // Optional: Navigation helper methods

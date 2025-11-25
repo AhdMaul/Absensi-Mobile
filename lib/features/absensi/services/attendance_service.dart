@@ -48,14 +48,27 @@ class AttendanceService {
     try {
       const String endpoint = '/attendance'; 
       
+      print(">>> [AttendanceService] Getting history from: $endpoint");
+      
       final response = await _apiBase.get(
         endpoint,
         useExpress: true,
       );
 
-      return response['attendances'] ?? [];
-    } catch (e) {
-      print("Gagal ambil history: $e");
+      print("<<< [AttendanceService] Got response: ${response.toString().substring(0, 100)}...");
+
+      final attendances = response['attendances'] ?? [];
+      print("✓ [AttendanceService] Parsed ${attendances.length} attendance records");
+      
+      return attendances;
+    } on ApiException catch (e) {
+      print("❌ [AttendanceService] API Error (getHistory): ${e.message}");
+      // Untuk home screen, kita bisa return empty list jika API error
+      // Tapi log dulu agar kita tahu ada masalah
+      return [];
+    } catch (e, stackTrace) {
+      print("❌ [AttendanceService] FATAL Error (getHistory): $e");
+      print(stackTrace);
       return [];
     }
   }

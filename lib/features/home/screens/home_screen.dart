@@ -3,58 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Import yang diperlukan
-import '../widgets/home_widgets.dart';
+// Imports
+import '../controllers/home_controller.dart';
+import '../widgets/home_content.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/connectivity_banner.dart'; 
+import '../../../core/widgets/connectivity_banner.dart';
 import '../../profile/screens/profile_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+  Widget build(BuildContext context) {
+    final homeController = Get.find<HomeController>();
 
-class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-    
-    // Tampilkan welcome snackbar setelah build selesai (jika ada argumen)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Show welcome snackbar if coming from login
+    Future.delayed(Duration.zero, () {
       final args = Get.arguments;
       if (args != null && args['showWelcome'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                Text(
-                  'Login berhasil', 
-                  style: GoogleFonts.hankenGrotesk(fontSize: 16, fontWeight: FontWeight.w500)
-                ),
-              ],
-            ),
-            // Menggunakan withValues
-            backgroundColor: AppColors.neonGreen.withValues(alpha: 0.9),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        homeController.showWelcomeSnackbar();
       }
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
     return PopScope(
-      canPop: false, 
+      canPop: false,
       child: Scaffold(
         backgroundColor: Colors.white,
         body: Stack(
@@ -114,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             letterSpacing: -0.5,
                           ),
                         ),
-                        
+
                         // Tombol Profil
                         GestureDetector(
                           onTap: () {
@@ -149,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Body
                   Expanded(
                     child: ConnectivityBanner(
-                      child: const HomeWidget(),
+                      child: const HomeContent(),
                     ),
                   ),
                 ],

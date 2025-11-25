@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
-import '../widgets/home_widgets.dart'; // Untuk ActivityItem
+import '../controllers/home_controller.dart'; // Import ActivityItem dari sini
 import '../widgets/activity_tile.dart'; // Widget yang baru kita pisah
 
 class HistoryScreen extends StatefulWidget {
