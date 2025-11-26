@@ -28,32 +28,58 @@ class HomeScreen extends StatelessWidget {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.white, // Base color tetap putih
         body: Stack(
           children: [
-            // --- LAYER 1: Background Aurora ---
+            // --- LAYER 1: Background Aurora (DIKEMBALIKAN & DISESUAIKAN) ---
             Positioned.fill(
               child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                // Blur tetap tinggi agar halus seperti asap/cahaya
+                imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
                 child: Stack(
                   children: [
+                    // 1. Bola Hijau (Header Glow)
+                    // Diposisikan di pojok kiri atas untuk highlight area "Selamat Datang"
                     Positioned(
-                      top: -100, left: -100,
+                      top: -100, 
+                      left: -80,
                       child: Container(
-                        width: 300, height: 300,
+                        width: 350, 
+                        height: 350,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.neonGreen.withValues(alpha: 0.2),
+                          // Opacity 0.15: Cukup terlihat segar, tapi tidak bikin tulisan hitam susah dibaca
+                          color: AppColors.neonGreen.withValues(alpha: 0.15),
                         ),
                       ),
                     ),
+                    
+                    // 2. Bola Cyan/Biru (Bottom Glow)
+                    // Diposisikan di kanan bawah atau tengah untuk variasi
                     Positioned(
-                      bottom: -150, right: -100,
+                      top: 200, 
+                      right: -150,
                       child: Container(
-                        width: 400, height: 400,
+                        width: 400, 
+                        height: 400,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.neonCyan.withValues(alpha: 0.2),
+                          // Opacity 0.1: Lebih tipis biar tidak tabrakan sama kartu konten
+                          color: AppColors.neonCyan.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ),
+
+                    // 3. (Opsional) Aksen kecil Ungu di tengah bawah untuk blend tombol "Masuk Lagi"
+                    Positioned(
+                      bottom: -100,
+                      left: 50,
+                      child: Container(
+                        width: 300, 
+                        height: 300,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF6C63FF).withValues(alpha: 0.05),
                         ),
                       ),
                     ),
@@ -64,14 +90,12 @@ class HomeScreen extends StatelessWidget {
 
             // --- LAYER 2: UI Content ---
             SafeArea(
-              bottom: false, // Biarkan konten bawah mengalir
+              bottom: false, 
               child: Column(
                 children: [
                   // AppBar Custom
                   Container(
-                    // Margin atas agar tidak mepet status bar
                     margin: const EdgeInsets.only(top: 12.0, bottom: 8.0),
-                    // Padding Horizontal 24.0 (Konsisten dengan HomeWidget)
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -81,7 +105,7 @@ class HomeScreen extends StatelessWidget {
                           'Beranda',
                           style: GoogleFonts.hankenGrotesk(
                             fontSize: 28,
-                            fontWeight: FontWeight.w800, // Extra Bold
+                            fontWeight: FontWeight.w800, 
                             color: AppColors.textPrimary,
                             letterSpacing: -0.5,
                           ),
@@ -97,7 +121,7 @@ class HomeScreen extends StatelessWidget {
                             height: 44,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Colors.white.withValues(alpha: 0.8), // Sedikit transparan biar background tembus dikit
                               border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                               boxShadow: [
                                 BoxShadow(

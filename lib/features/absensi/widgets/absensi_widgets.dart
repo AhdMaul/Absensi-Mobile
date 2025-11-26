@@ -5,13 +5,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// --- IMPORTS ---
 import '../../../services/location_service.dart';
 import '../../../config/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../services/api_base.dart'; // Import ApiException
+import '../../../services/api_base.dart'; // Untuk ApiException
 import '../models/verification_result_model.dart';
 import 'verify_face_widgets.dart'; 
-import '../services/attendance_service.dart';
+import '../../absensi/services/attendance_service.dart';
 
 class AbsenWidget extends StatefulWidget {
   const AbsenWidget({super.key});
@@ -31,8 +32,9 @@ class _AbsenWidgetState extends State<AbsenWidget> {
   
   bool _showCameraStep = false;
   
+  // Hasil Akhir
   String? _finalAbsensiMessage;
-  Color? _finalAbsensiColor;
+  // Color? _finalAbsensiColor; // (Unused field removed)
   Position? _currentPosition;
 
   DateTime _currentTime = DateTime.now();
@@ -45,6 +47,7 @@ class _AbsenWidgetState extends State<AbsenWidget> {
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
        if (mounted) setState(() => _currentTime = DateTime.now());
     });
+    // _loadUserId(); // (Unused function removed)
   }
 
   @override
@@ -79,7 +82,7 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         
         if (isValid) {
           _locationMessage = 'Lokasi Valid (${distance.toStringAsFixed(0)}m)';
-          _showCameraStep = true;
+          _showCameraStep = true; 
         } else {
           _locationMessage = 'Lokasi Jauh (${distance.toStringAsFixed(0)}m).\nMax radius: ${AppConstants.allowedRadiusMeters}m';
           _showCameraStep = false;
@@ -93,7 +96,10 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         _locationMessage = 'Gagal deteksi lokasi. Pastikan GPS aktif.';
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ),
       );
     }
   }
@@ -103,7 +109,7 @@ class _AbsenWidgetState extends State<AbsenWidget> {
 
     setState(() {
       _finalAbsensiMessage = "Absensi Berhasil!\nPukul $formattedTime";
-      _finalAbsensiColor = AppColors.neonGreen;
+      // _finalAbsensiColor = AppColors.neonGreen; // (Unused)
       _showCameraStep = false;
     });
 
@@ -117,11 +123,11 @@ class _AbsenWidgetState extends State<AbsenWidget> {
     });
   }
 
-  // --- FUNGSI KIRIM DATA ABSENSI ---
   Future<void> _sendAttendanceData(DateTime captureTime) async {
     if (_currentPosition != null) {
       try {
-        // Panggil service (userId & timestamp otomatis dihandle backend)
+        // --- PERBAIKAN PANGGILAN SERVICE ---
+        // Menggunakan parameter terpisah, bukan model
         final response = await _attendanceService.submitAttendance(
           latitude: _currentPosition!.latitude,
           longitude: _currentPosition!.longitude,
@@ -129,7 +135,8 @@ class _AbsenWidgetState extends State<AbsenWidget> {
           timestampForLog: captureTime,
         );
         
-        print("Response Backend: ${response['message']}");
+        // Gunakan debugPrint agar tidak warning avoid_print
+        debugPrint("Data absensi terkirim. Response: ${response['message']}");
         
         if (mounted && response['message'] != null) {
            ScaffoldMessenger.of(context).showSnackBar(
@@ -138,20 +145,17 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         }
 
       } on ApiException catch (e) {
-        // INI MENANGKAP PESAN ERROR DARI BACKEND (Misal: Sudah absen pulang)
+        debugPrint("Gagal kirim data absensi: ${e.message}");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.message), // Tampilkan pesan asli backend
-              backgroundColor: Colors.orange
-            ),
+            SnackBar(content: Text(e.message), backgroundColor: Colors.orange),
           );
         }
       } catch (e) {
-        print("Error Lain: $e");
+        debugPrint("Error tak terduga: $e");
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal sinkronisasi data absensi'), backgroundColor: Colors.red),
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error sistem: $e'), backgroundColor: Colors.red),
           );
         }
       }
@@ -192,6 +196,7 @@ class _AbsenWidgetState extends State<AbsenWidget> {
               border: Border.all(color: AppColors.neonGreen, width: 2),
               boxShadow: [
                 BoxShadow(
+                  // Perbaikan withValues
                   color: AppColors.neonGreen.withValues(alpha: 0.2),
                   blurRadius: 20, offset: const Offset(0, 10),
                 )
@@ -263,7 +268,9 @@ class _AbsenWidgetState extends State<AbsenWidget> {
                   ],
                 ),
               ),
+              
               const SizedBox(height: 16),
+              
               AnimatedOpacity(
                 opacity: _showCameraStep ? 1.0 : 0.4,
                 duration: const Duration(milliseconds: 400),
@@ -296,6 +303,7 @@ class _AbsenWidgetState extends State<AbsenWidget> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
+        // Perbaikan withValues
         color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
@@ -312,6 +320,7 @@ class _AbsenWidgetState extends State<AbsenWidget> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
+                  // Perbaikan withValues
                   color: isCompleted ? AppColors.neonGreen.withValues(alpha: 0.1) : Colors.grey.shade100,
                   shape: BoxShape.circle,
                 ),

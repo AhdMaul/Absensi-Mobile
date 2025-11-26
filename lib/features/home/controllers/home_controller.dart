@@ -1,14 +1,16 @@
+// lib/features/home/controllers/home_controller.dart
+
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:async';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../absensi/services/attendance_service.dart';
 
-// Models
+// --- MODELS ---
 class ActivityItem {
   final String date;
   final String status;
@@ -25,16 +27,18 @@ class ActivityItem {
 
 class DashboardData {
   final String userName;
-  final String? todayCheckIn;
-  final String? todayCheckOut;
+  final String? lastCheckInTime;  
+  final String? lastCheckOutTime; 
   final bool isLate;
+  final bool isCurrentlyCheckedIn; 
   final List<ActivityItem> recentActivities;
 
   DashboardData({
     this.userName = "Pengguna",
-    this.todayCheckIn,
-    this.todayCheckOut,
+    this.lastCheckInTime,
+    this.lastCheckOutTime,
     this.isLate = false,
+    this.isCurrentlyCheckedIn = false, 
     this.recentActivities = const [],
   });
 }
@@ -43,31 +47,25 @@ class HomeController extends GetxController {
   final AttendanceService _attendanceService = AttendanceService();
   Timer? _clockTimer;
 
-  // --- Rx Variables (Reactive State) ---
+  // --- Reactive State ---
   final isLoading = true.obs;
   final currentTime = DateTime.now().obs;
   final dashboardData = DashboardData().obs;
 
-  // --- Getters untuk convenience ---
+  // --- Getters ---
   String get userName => dashboardData.value.userName;
-  String? get todayCheckIn => dashboardData.value.todayCheckIn;
-  String? get todayCheckOut => dashboardData.value.todayCheckOut;
+  String? get todayCheckIn => dashboardData.value.lastCheckInTime;
+  String? get todayCheckOut => dashboardData.value.lastCheckOutTime;
   bool get isLate => dashboardData.value.isLate;
-  List<ActivityItem> get recentActivities =>
-      dashboardData.value.recentActivities;
-
-  // --- Tombol state ---
-  final isAbsensiButtonEnabled = true.obs;
+  List<ActivityItem> get recentActivities => dashboardData.value.recentActivities;
 
   @override
   void onInit() {
     super.onInit();
-    Intl.defaultLocale = 'id_ID';
-
-    // Start real-time clock
-    _startClockTimer();
-
-    // Fetch dashboard data on init
+    // Timer jam digital
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      currentTime.value = DateTime.now();
+    });
     fetchDashboardData();
   }
 
@@ -77,289 +75,172 @@ class HomeController extends GetxController {
     super.onClose();
   }
 
-  // --- Clock Timer (Real-time) ---
-  void _startClockTimer() {
-    try {
-      _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        try {
-          if (isLoading.value == false) {
-            currentTime.value = DateTime.now();
-          }
-        } catch (e) {
-          debugPrint("⚠️ ERROR updating clock: $e");
-        }
-      });
-    } catch (e) {
-      debugPrint("❌ ERROR starting clock timer: $e");
-    }
-  }
-
-  // --- Helper: Safe DateTime Parsing ---
-  DateTime? _safeParseDateTime(dynamic dateString) {
-    if (dateString == null) return null;
-    try {
-      return DateTime.parse(dateString.toString()).toLocal();
-    } catch (e) {
-      debugPrint("❌ ERROR parsing date: $dateString -> $e");
-      return null;
-    }
-  }
-
-  // --- Helper: Safe Format DateTime to HH:mm ---
-  String _formatTimeString(dynamic dateString) {
-    try {
-      final dt = _safeParseDateTime(dateString);
-      if (dt == null) return '-';
-      return DateFormat('HH:mm').format(dt);
-    } catch (e) {
-      debugPrint("❌ ERROR formatting time: $e");
-      return '-';
-    }
-  }
-
-  // --- Helper: Safe Format DateTime to dd MMM ---
-  String _formatDateString(dynamic dateString) {
-    try {
-      final dt = _safeParseDateTime(dateString);
-      if (dt == null) return '-';
-      return DateFormat('dd MMM').format(dt);
-    } catch (e) {
-      debugPrint("❌ ERROR formatting date: $e");
-      return '-';
-    }
-  }
-
-  // --- Fetch Dashboard Data ---
+  // --- FUNGSI UTAMA: Tarik Data dari Backend ---
   Future<void> fetchDashboardData() async {
     try {
-      isLoading.value = true;
-      debugPrint("🔄 [HomeController] Starting fetchDashboardData...");
-
       final prefs = await SharedPreferences.getInstance();
-      final userName = prefs.getString('userName') ?? "User";
-      debugPrint("✓ Username: $userName");
+      final localName = prefs.getString('userName') ?? "User";
 
-      // 1. Get attendance history
-      debugPrint("📡 [HomeController] Calling getHistory()...");
       final history = await _attendanceService.getHistory();
-      debugPrint("✓ History returned: ${history.length} items");
 
-      String? checkInTime;
-      String? checkOutTime;
-      bool isLate = false;
+      bool lateStatus = false;
+      bool currentlyCheckedIn = false;
+      String? displayCheckIn;
+      String? displayCheckOut;
       List<ActivityItem> activities = [];
 
       final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      debugPrint("📅 Today: $todayStr");
 
-      // 2. Find today's attendance
-      if (history.isNotEmpty) {
-        try {
-          final todayAbsence = history.firstWhere((item) {
-            try {
-              final dateString = item['date'] ?? item['createdAt'];
-              if (dateString == null) return false;
-              final itemDate = _safeParseDateTime(dateString);
-              if (itemDate == null) return false;
-              return DateFormat('yyyy-MM-dd').format(itemDate) == todayStr;
-            } catch (e) {
-              debugPrint("⚠️ ERROR checking date for item: $e");
-              return false;
-            }
-          }, orElse: () => null);
+      // Filter Data HARI INI
+      List<dynamic> todayRecords = history.where((item) {
+         final dateString = item['date'] ?? item['createdAt'];
+         if (dateString == null) return false;
+         final itemDate = DateTime.parse(dateString).toLocal();
+         return DateFormat('yyyy-MM-dd').format(itemDate) == todayStr;
+      }).toList();
 
-          if (todayAbsence != null) {
-            debugPrint("✓ Found today's attendance record");
-            if (todayAbsence['clockIn'] != null) {
-              checkInTime = _formatTimeString(todayAbsence['clockIn']);
-              debugPrint("✓ Check-in time: $checkInTime");
+      // Urutkan Ascending (Sesi 1 -> Sesi Terakhir)
+      todayRecords.sort((a, b) {
+          final dateA = a['createdAt'] ?? a['date'];
+          final dateB = b['createdAt'] ?? b['date'];
+          return DateTime.parse(dateA).compareTo(DateTime.parse(dateB));
+      });
 
-              final clockInDt = _safeParseDateTime(todayAbsence['clockIn']);
-              if (clockInDt != null) {
-                if (clockInDt.hour > 8 ||
-                    (clockInDt.hour == 8 && clockInDt.minute > 0)) {
-                  isLate = true;
-                  debugPrint("⚠️ Marked as LATE");
-                }
-              }
-            }
-            if (todayAbsence['clockOut'] != null) {
-              checkOutTime = _formatTimeString(todayAbsence['clockOut']);
-              debugPrint("✓ Check-out time: $checkOutTime");
-            }
-          } else {
-            debugPrint("ℹ️ No attendance record for today");
-          }
-        } catch (e) {
-          debugPrint("❌ ERROR processing today's attendance: $e");
+      // Logika Status Absensi
+      if (todayRecords.isNotEmpty) {
+        // Cek telat dari record PERTAMA
+        final firstRecord = todayRecords.first;
+        final clockInDt = DateTime.parse(firstRecord['clockIn']).toLocal();
+        
+        if (firstRecord['status'] == 'late' || (clockInDt.hour > 8 || (clockInDt.hour == 8 && clockInDt.minute > 0))) {
+           lateStatus = true;
         }
 
-        // 3. Map history to activity items
-        try {
-          history.sort((a, b) {
-            try {
-              final dateA = a['date'] ?? a['createdAt'];
-              final dateB = b['date'] ?? b['createdAt'];
-              final dtA = _safeParseDateTime(dateA);
-              final dtB = _safeParseDateTime(dateB);
-              if (dtA == null || dtB == null) return 0;
-              return dtB.compareTo(dtA);
-            } catch (e) {
-              debugPrint("⚠️ ERROR sorting: $e");
-              return 0;
-            }
-          });
-
-          activities = history.take(3).map<ActivityItem>((item) {
-            try {
-              final dateString = item['date'] ?? item['createdAt'];
-              final formattedDate = _formatDateString(dateString);
-
-              final inTime = item['clockIn'] != null
-                  ? _formatTimeString(item['clockIn'])
-                  : '-';
-              final outTime = item['clockOut'] != null
-                  ? _formatTimeString(item['clockOut'])
-                  : '-';
-
-              String statusText = (item['status'] ?? '').toString().toLowerCase();
-              if (statusText == 'late') {
-                statusText = 'Telat';
-              } else if (statusText == 'present') {
-                statusText = 'Tepat Waktu';
-              } else {
-                statusText = statusText.isNotEmpty ? statusText : '-';
-              }
-
-              return ActivityItem(
-                date: formattedDate,
-                status: statusText,
-                checkIn: inTime,
-                checkOut: outTime,
-              );
-            } catch (e) {
-              debugPrint("❌ ERROR mapping activity item: $e");
-              return ActivityItem(
-                date: '-',
-                status: '-',
-                checkIn: '-',
-                checkOut: '-',
-              );
-            }
-          }).toList();
-          debugPrint("✓ Mapped ${activities.length} activity items");
-        } catch (e) {
-          debugPrint("❌ ERROR mapping history: $e");
+        // Cek record TERAKHIR untuk menentukan status tombol saat ini
+        final lastRecord = todayRecords.last;
+        
+        if (lastRecord['clockIn'] != null) {
+           displayCheckIn = DateFormat('HH:mm').format(DateTime.parse(lastRecord['clockIn']).toLocal());
         }
-      } else {
-        debugPrint("ℹ️ History is empty");
+        
+        if (lastRecord['clockOut'] != null) {
+           // Sesi terakhir SUDAH ditutup (Clock Out)
+           // Artinya user sedang "di luar" -> Siap untuk masuk lagi (Shift Baru/Lanjut)
+           displayCheckOut = DateFormat('HH:mm').format(DateTime.parse(lastRecord['clockOut']).toLocal());
+           currentlyCheckedIn = false; 
+        } else {
+           // Sesi terakhir BELUM ditutup (Masih null)
+           // Artinya user sedang "kerja" -> Siap untuk Absen Pulang
+           displayCheckOut = "--:--"; 
+           currentlyCheckedIn = true; 
+        }
       }
 
-      // 4. Update state
+      // Mapping List Aktivitas
+      if (history.isNotEmpty) {
+        history.sort((a, b) {
+            final dateA = a['createdAt'] ?? a['date'];
+            final dateB = b['createdAt'] ?? b['date'];
+            return DateTime.parse(dateB).compareTo(DateTime.parse(dateA));
+        });
+
+        activities = history.take(5).map<ActivityItem>((item) {
+           final dateString = item['date'] ?? item['createdAt'];
+           final date = DateTime.parse(dateString).toLocal();
+           
+           final inTime = item['clockIn'] != null ? DateFormat('HH:mm').format(DateTime.parse(item['clockIn']).toLocal()) : '-';
+           final outTime = item['clockOut'] != null ? DateFormat('HH:mm').format(DateTime.parse(item['clockOut']).toLocal()) : '-';
+           
+           String statusText = item['status'] == 'late' ? 'Telat' : (item['status'] == 'present' ? 'Tepat Waktu' : item['status'] ?? '-');
+           
+           return ActivityItem(
+             date: DateFormat('dd MMM').format(date),
+             status: statusText,
+             checkIn: inTime,
+             checkOut: outTime,
+           );
+        }).toList();
+      }
+
       dashboardData.value = DashboardData(
-        userName: userName,
-        todayCheckIn: checkInTime,
-        todayCheckOut: checkOutTime,
-        isLate: isLate,
+        userName: localName,
+        lastCheckInTime: displayCheckIn,
+        lastCheckOutTime: displayCheckOut,
+        isLate: lateStatus,
+        isCurrentlyCheckedIn: currentlyCheckedIn, 
         recentActivities: activities,
       );
 
-      isLoading.value = false;
-      debugPrint("✅ [HomeController] fetchDashboardData completed successfully");
-    } catch (e, stackTrace) {
-      debugPrint("❌ [HomeController] FATAL ERROR fetch dashboard: $e");
-      debugPrintStack(stackTrace: stackTrace);
+    } catch (e) {
+      debugPrint("Error fetching dashboard: $e");
+    } finally {
       isLoading.value = false;
     }
   }
 
-  // --- Handle Absensi Button ---
-  Future<void> handleAbsensiButton() async {
-    bool alreadyCheckedIn = todayCheckIn != null;
-    bool alreadyCheckedOut = todayCheckOut != null;
+  // --- LOGIKA TOMBOL ABSENSI (UPDATED) ---
+  Map<String, dynamic> getActionButtonInfo() {
+    String text;
+    IconData icon;
+    Color color;
+    
+    // Kita set false agar tombol TIDAK PERNAH mati (bisa multi-shift)
+    bool isCompleted = false; 
 
-    // CASE 1: Already checked in & out
-    if (alreadyCheckedIn && alreadyCheckedOut) {
-      Get.snackbar(
-        'Selesai',
-        'Wah, kamu rajin banget! Istirahat dulu ya, lanjut lagi besok! ✨',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF0F766E),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-        icon: const Icon(Icons.sentiment_satisfied_alt_rounded,
-            color: Colors.white),
-      );
-      return;
-    }
+    final isCurrentlyCheckedIn = dashboardData.value.isCurrentlyCheckedIn;
+    final hasCheckIn = dashboardData.value.lastCheckInTime != null;
+    final hasCheckOut = dashboardData.value.lastCheckOutTime != null;
 
-    // CASE 2: Navigate to absensi screen
-    isAbsensiButtonEnabled.value = false;
-    final result = await Get.toNamed(AppRoutes.absensi);
-    isAbsensiButtonEnabled.value = true;
-
-    if (result != null && result is DateTime) {
-      await fetchDashboardData(); // Refresh data
-    }
-  }
-
-  // --- Get button display info ---
-  Map<String, dynamic> getAbsensiButtonInfo() {
-    String text = "Absen Masuk";
-    IconData icon = Icons.face_retouching_natural;
-
-    if (todayCheckIn != null) {
-      if (todayCheckOut == null) {
-        text = "Absen Pulang";
-        icon = Icons.exit_to_app_rounded;
+    if (isCurrentlyCheckedIn) {
+      // KONDISI 1: SEDANG KERJA (Tombol jadi 'Absen Pulang')
+      text = "Absen Pulang";
+      icon = Icons.logout_rounded;
+      // Gunakan warna kontras untuk 'Stop/Keluar', misal Orange/Merah
+      color = Colors.orange.shade800; 
+    } else {
+      // SEDANG TIDAK KERJA
+      if (hasCheckIn && hasCheckOut) {
+        // KONDISI 2: SUDAH PERNAH MASUK & KELUAR HARI INI (Re-entry)
+        text = "Masuk Lagi"; 
+        icon = Icons.update_rounded; // Icon refresh/cycle
+        // Warna Ungu/Indigo sebagai penanda ini sesi tambahan
+        color = const Color(0xFF6C63FF); 
       } else {
-        text = "Selesai Hari Ini";
-        icon = Icons.check_circle_outline_rounded;
+        // KONDISI 3: BELUM ADA ABSEN HARI INI (Fresh Start)
+        text = "Absen Masuk";
+        icon = Icons.login_rounded;
+        color = AppColors.neonGreen; // Warna Hijau Fresh
       }
     }
-
-    bool isCompleted = todayCheckIn != null && todayCheckOut != null;
 
     return {
       'text': text,
       'icon': icon,
+      'color': color,
       'isCompleted': isCompleted,
     };
   }
 
-  // --- Logout ---
-  Future<void> logout() async {
-    try {
-      await Get.defaultDialog(
-        title: 'Konfirmasi Logout',
-        content: const Text('Apakah Anda yakin ingin logout?'),
-        onConfirm: () async {
-          Get.back();
-          // Panggil logout dari service
-          // await _authService.logout();
-          Get.offAllNamed(AppRoutes.login);
-        },
-        onCancel: () => Get.back(),
-      );
-    } catch (e) {
-      debugPrint("Error logout: $e");
+  // --- Navigasi ke Absensi ---
+  Future<void> navigateToAbsensi() async {
+    final result = await Get.toNamed(AppRoutes.absensi);
+    if (result != null) {
+      fetchDashboardData();
     }
   }
 
-  // --- Helper: Show success snackbar ---
+  // --- FUNGSI YANG HILANG (DIKEMBALIKAN) ---
   void showWelcomeSnackbar() {
     Get.snackbar(
       'Selamat Datang',
       'Login berhasil! Selamat bekerja.',
-      snackPosition: SnackPosition.BOTTOM,
+      snackPosition: SnackPosition.TOP,
       backgroundColor: AppColors.neonGreen.withValues(alpha: 0.9),
       colorText: Colors.white,
-      duration: const Duration(seconds: 2),
       margin: const EdgeInsets.all(16),
-      borderRadius: 10,
+      borderRadius: 12,
       icon: const Icon(Icons.check_circle, color: Colors.white),
+      duration: const Duration(seconds: 3),
     );
   }
 }

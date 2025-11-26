@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+// Import Widget Tombol Premium Baru
+import '../../../core/widgets/premium_buttons.dart'; 
 import '../controllers/auth_controller.dart';
 
 class LoginBottomSheet extends StatefulWidget {
@@ -16,6 +18,8 @@ class LoginBottomSheet extends StatefulWidget {
 class _LoginBottomSheetState extends State<LoginBottomSheet>
     with SingleTickerProviderStateMixin {
   bool _obscurePassword = true;
+  
+  // Pastikan AuthController sudah di-put di parent (LoginScreen)
   final controller = Get.find<AuthController>();
 
   late AnimationController _animationController;
@@ -23,6 +27,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
   @override
   void initState() {
     super.initState();
+    // Animasi muncul per item (Staggered Animation)
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -38,6 +43,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
 
   @override
   Widget build(BuildContext context) {
+    // Ambil padding keyboard agar tidak tertutup
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -53,7 +59,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Drag Handle
+              // 1. Drag Handle (Garis kecil di atas)
               _buildAnimatedItem(
                 index: 0,
                 child: Center(
@@ -82,6 +88,8 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
                   textAlign: TextAlign.center,
                 ),
               ),
+              
+              // 3. Subtitle
               _buildAnimatedItem(
                 index: 2,
                 child: Padding(
@@ -97,7 +105,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
                 ),
               ),
 
-              // 3. Email Input
+              // 4. Email Input
               _buildAnimatedItem(
                 index: 3,
                 child: _buildInput(
@@ -109,7 +117,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
               ),
               const SizedBox(height: 16),
 
-              // 4. Password Input
+              // 5. Password Input
               _buildAnimatedItem(
                 index: 4,
                 child: _buildInput(
@@ -125,42 +133,17 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
                   },
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24), // Jarak ke tombol sedikit lebih lega
 
-              // 6. Login Button
+              // 6. Login Button (NEW PREMIUM BUTTON)
               _buildAnimatedItem(
                 index: 6,
                 child: Obx(
-                  () => ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.buttonBlack,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    onPressed: controller.isLoading.value
-                        ? null
-                        // --- PERBAIKAN DI SINI (Hapus 'context') ---
-                        : () => controller.login(),
-                    child: controller.isLoading.value
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            'Log In',
-                            style: GoogleFonts.hankenGrotesk(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                  () => PremiumDarkButton(
+                    text: 'Log In',
+                    isLoading: controller.isLoading.value,
+                    // Tombol ini tidak pakai icon agar teks terlihat clean di tengah
+                    onPressed: () => controller.login(),
                   ),
                 ),
               ),
@@ -171,6 +154,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
     );
   }
 
+  /// Helper untuk animasi muncul bertahap (Staggered List)
   Widget _buildAnimatedItem({required int index, required Widget child}) {
     final double beginInterval = index * 0.1;
     final double endInterval = beginInterval + 0.4;
@@ -203,6 +187,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
     );
   }
 
+  /// Helper untuk Input Field
   Widget _buildInput({
     required TextEditingController controller,
     required String label,

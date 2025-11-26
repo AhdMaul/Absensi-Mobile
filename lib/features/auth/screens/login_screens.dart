@@ -1,13 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+// Import widget tombol baru
+import '../../../core/widgets/premium_buttons.dart'; 
 import '../widgets/login_header.dart';
 import '../widgets/login_bottom_sheet.dart';
 import '../controllers/auth_controller.dart';
 
-// Ubah menjadi StatefulWidget untuk menangani Animasi
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -17,33 +17,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _arrowController;
-  late Animation<Offset> _arrowAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    // Setup Animasi: Durasi 1 detik (cukup lambat agar elegan)
-    _arrowController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true); // Ulangi bolak-balik (Maju-Mundur)
-
-    // Definisi Gerakan: Geser dari posisi 0 ke kanan sedikit (0.25)
-    _arrowAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0.25, 0.0), // Geser horizontal sekitar 25% ukuran icon
-    ).animate(CurvedAnimation(
-      parent: _arrowController,
-      curve: Curves.easeInOut, // Gerakan halus (lambat di awal/akhir, cepat di tengah)
-    ));
-  }
-
-  @override
-  void dispose() {
-    _arrowController.dispose(); // Bersihkan controller saat layar ditutup
-    super.dispose();
-  }
+  // --- Animasi Panah Lama Dihapus karena icon di referensi berbeda ---
+  // Jika ingin tetap pakai panah animasi, bisa dimasukkan ke parameter icon di PremiumDarkButton
 
   @override
   Widget build(BuildContext context) {
@@ -53,31 +28,27 @@ class _LoginScreenState extends State<LoginScreen>
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // --- LAYER 1: Aurora Gradient Background ---
+          // --- LAYER 1: Aurora Gradient Background (Tetap sama) ---
           Positioned.fill(
             child: ImageFiltered(
               imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
               child: Stack(
                 children: [
                   Positioned(
-                    top: -50,
-                    left: -50,
+                    top: -50, left: -50,
                     child: Container(
-                      width: 300,
-                      height: 300,
+                      width: 300, height: 300,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        // Gunakan withValues atau withAlpha jika withOpacity deprecated di SDK barumu
+                        // Menggunakan withOpacity sesuai kode asli
                         color: AppColors.neonGreen.withOpacity(0.3),
                       ),
                     ),
                   ),
                   Positioned(
-                    bottom: 100,
-                    right: -50,
+                    bottom: 100, right: -50,
                     child: Container(
-                      width: 300,
-                      height: 300,
+                      width: 300, height: 300,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.neonCyan.withOpacity(0.3),
@@ -97,26 +68,23 @@ class _LoginScreenState extends State<LoginScreen>
                 children: [
                   const Spacer(),
 
-                  // Header (Logo & Vector)
+                  // Header (Logo & Vector) -
                   const LoginHeader(),
 
                   const Spacer(),
 
-                  // --- Action Button with Animation ---
+                  // --- NEW PREMIUM ACTION BUTTONS ---
                   SizedBox(
                     width: double.infinity,
                     child: Column(
                       children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.buttonBlack,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            elevation: 8,
-                            shadowColor: AppColors.buttonBlack.withOpacity(0.4),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(40),
-                            ),
+                        // 1. Tombol Utama (Dark Premium)
+                        PremiumDarkButton(
+                          text: 'Get Started',
+                          icon: const Icon(
+                            Icons.arrow_forward_rounded, 
+                            color: Colors.white, 
+                            size: 18
                           ),
                           onPressed: () {
                             showModalBottomSheet(
@@ -126,29 +94,17 @@ class _LoginScreenState extends State<LoginScreen>
                               builder: (context) => const LoginBottomSheet(),
                             );
                           },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Get Started',
-                                style: GoogleFonts.hankenGrotesk(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(width: 12), // Jarak teks ke panah
-                              
-                              // --- ANIMATED ARROW ---
-                              SlideTransition(
-                                position: _arrowAnimation,
-                                child: const Icon(
-                                  Icons.arrow_forward_rounded, 
-                                  size: 22
-                                ),
-                              ),
-                            ],
-                          ),
+                        ),
+                        
+                        const SizedBox(height: 16), // Jarak antar tombol
+
+                        // 2. Tombol Kedua (Glassmorphism) - Sesuai referensi
+                        GlassButton(
+                          text: 'Learn More', // Teks contoh untuk tombol kedua
+                          onPressed: () {
+                            // Aksi untuk tombol kedua (misal ke website)
+                            Get.snackbar("Info", "Fitur belum tersedia");
+                          },
                         ),
                       ],
                     ),

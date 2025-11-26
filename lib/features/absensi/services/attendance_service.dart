@@ -1,10 +1,12 @@
 import 'package:intl/intl.dart';
 import '../../../services/api_base.dart';
+import '../models/attendance_model.dart';
 
 class AttendanceService {
   final ApiBase _apiBase = ApiBase.instance;
 
-  // Fungsi untuk kirim absen
+  // --- 1. Submit Absensi (Sesuai AbsensiWidget) ---
+  // Backend tidak butuh userId/timestamp di body request
   Future<Map<String, dynamic>> submitAttendance({
     required double latitude,
     required double longitude,
@@ -12,9 +14,7 @@ class AttendanceService {
     required DateTime timestampForLog,
   }) async {
     try {
-      // PERBAIKAN: Gunakan '/attendance' saja.
-      // Backend route: router.post('/attendance', ...)
-      // Asumsi server mount di /api, jadi total: /api/attendance
+      // Endpoint: /attendance (karena di router backend: post('/', ...))
       const String endpoint = '/attendance'; 
 
       final Map<String, dynamic> body = {
@@ -23,53 +23,46 @@ class AttendanceService {
         'status': status,
       };
 
-      print(">>> [Flutter] Kirim Absen ke: $endpoint");
-      print(">>> [Flutter] Data: $body");
-      
+      // Gunakan debugPrint atau log jika ada
+      // print(">>> [Flutter] Kirim Absen ke: $endpoint"); 
+
       final responseBody = await _apiBase.post(
         endpoint,
         body: body,
-        useExpress: true, 
+        useExpress: true,
       );
 
       return responseBody;
 
-    } on ApiException catch (e) {
-      // Tangkap pesan dari backend (misal: "Anda sudah absen pulang")
-      rethrow; // Teruskan error ini ke Widget agar bisa ditampilkan di SnackBar
+    } on ApiException {
+      rethrow; // Biarkan error API naik ke UI
     } catch (e) {
-      print("Error Tak Terduga: $e");
-      throw ApiException("Terjadi kesalahan sistem saat absen.");
+      throw 'Terjadi kesalahan sistem saat absen.';
     }
   }
 
-  // Fungsi untuk ambil history
+  // --- 2. Ambil Riwayat (Sesuai HomeController) ---
+  // Menggunakan endpoint GET /attendance yang mengembalikan data hari ini (atau semua, tergantung backend)
   Future<List<dynamic>> getHistory() async {
     try {
       const String endpoint = '/attendance'; 
-      
-      print(">>> [AttendanceService] Getting history from: $endpoint");
       
       final response = await _apiBase.get(
         endpoint,
         useExpress: true,
       );
 
-      print("<<< [AttendanceService] Got response: ${response.toString().substring(0, 100)}...");
-
-      final attendances = response['attendances'] ?? [];
-      print("✓ [AttendanceService] Parsed ${attendances.length} attendance records");
-      
-      return attendances;
-    } on ApiException catch (e) {
-      print("❌ [AttendanceService] API Error (getHistory): ${e.message}");
-      // Untuk home screen, kita bisa return empty list jika API error
-      // Tapi log dulu agar kita tahu ada masalah
-      return [];
-    } catch (e, stackTrace) {
-      print("❌ [AttendanceService] FATAL Error (getHistory): $e");
-      print(stackTrace);
+      // Backend return: { success: true, attendances: [...] }
+      return response['attendances'] ?? [];
+    } catch (e) {
+      // print("Gagal ambil history: $e");
       return [];
     }
+  }
+
+  // (Optional) Fungsi lama fetchUserAttendances bisa dihapus atau disesuaikan
+  Future<List<AttendanceModel>> fetchUserAttendances(int userId) async {
+     // ... (bisa dihapus jika tidak dipakai lagi)
+     return [];
   }
 }

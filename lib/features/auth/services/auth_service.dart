@@ -37,8 +37,13 @@ class AuthService {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token'); 
-    print("Token removed successfully!");
+    // Remove auth-related keys to ensure a clean logout
+    await prefs.remove('token');
+    await prefs.remove('userName');
+    // If you store other user-related prefs (email, id), remove them here as well
+    // await prefs.remove('userEmail');
+    // await prefs.remove('userId');
+    print("Token and user data removed successfully!");
   }
 
 
