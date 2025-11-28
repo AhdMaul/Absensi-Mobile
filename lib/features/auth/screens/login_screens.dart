@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_snackbar.dart';
-// Import widget tombol baru
 import '../../../core/widgets/premium_buttons.dart'; 
 import '../widgets/login_header.dart';
 import '../widgets/login_bottom_sheet.dart';
@@ -18,8 +17,39 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
-  // --- Animasi Panah Lama Dihapus karena icon di referensi berbeda ---
-  // Jika ingin tetap pakai panah animasi, bisa dimasukkan ke parameter icon di PremiumDarkButton
+
+  // --- Fungsi Custom untuk Animasi Spring/Bouncy ---
+  void showSpringBottomSheet(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true, // Bisa ditutup dengan tap background
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black.withOpacity(0.5), // Background gelap
+      transitionDuration: const Duration(milliseconds: 600), // Durasi animasi
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const Align(
+          alignment: Alignment.bottomCenter,
+          child: LoginBottomSheet(),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        // Kurva ElasticOut memberikan efek "memantul" (Bouncy)
+        final curvedAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.elasticOut, 
+          reverseCurve: Curves.easeOutCubic,
+        );
+
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1), // Mulai dari bawah layar
+            end: Offset.zero,          // Berhenti di posisi asli
+          ).animate(curvedAnimation),
+          child: child,
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen>
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // --- LAYER 1: Aurora Gradient Background (Tetap sama) ---
+          // --- LAYER 1: Aurora Gradient Background ---
           Positioned.fill(
             child: ImageFiltered(
               imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
@@ -41,8 +71,7 @@ class _LoginScreenState extends State<LoginScreen>
                       width: 300, height: 300,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        // Menggunakan withOpacity sesuai kode asli
-                        color: AppColors.neonGreen.withOpacity(0.3),
+                        color: AppColors.neonGreen.withAlpha((0.3 * 255).round()),
                       ),
                     ),
                   ),
@@ -52,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen>
                       width: 300, height: 300,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.neonCyan.withOpacity(0.3),
+                        color: AppColors.neonCyan.withAlpha((0.3 * 255).round()),
                       ),
                     ),
                   ),
@@ -68,10 +97,7 @@ class _LoginScreenState extends State<LoginScreen>
               child: Column(
                 children: [
                   const Spacer(),
-
-                  // Header (Logo & Vector) -
                   const LoginHeader(),
-
                   const Spacer(),
 
                   // --- NEW PREMIUM ACTION BUTTONS ---
@@ -79,7 +105,6 @@ class _LoginScreenState extends State<LoginScreen>
                     width: double.infinity,
                     child: Column(
                       children: [
-                        // 1. Tombol Utama (Dark Premium)
                         PremiumDarkButton(
                           text: 'Get Started',
                           icon: const Icon(
@@ -88,27 +113,8 @@ class _LoginScreenState extends State<LoginScreen>
                             size: 18
                           ),
                           onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => const LoginBottomSheet(),
-                            );
-                          },
-                        ),
-                        
-                        const SizedBox(height: 16), // Jarak antar tombol
-
-                        // 2. Tombol Kedua (Glassmorphism) - Sesuai referensi
-                        GlassButton(
-                          text: 'Learn More', // Teks contoh untuk tombol kedua
-                          onPressed: () {
-                            // Aksi untuk tombol kedua (misal ke website)
-                            AppSnackbar.show(
-                              "Info",
-                              "Fitur belum tersedia",
-                              type: 'info',
-                            );
+                            // Panggil fungsi animasi baru di sini
+                            showSpringBottomSheet(context);
                           },
                         ),
                       ],
