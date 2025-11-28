@@ -98,12 +98,12 @@ class AuthController extends GetxController {
     IconData icon;
 
     if (type == 'error') {
-      bgColor = const Color(0xFFFEE2E2); // Soft Red
-      textColor = const Color(0xFF991B1B); 
+      bgColor = const Color(0xFFEF4444); // Warna Merah
+      textColor = const Color(0xFF7F1D1D); 
       icon = Icons.sentiment_dissatisfied_rounded;
     } else { // warning
-      bgColor = const Color(0xFFFEF3C7); // Soft Amber
-      textColor = const Color(0xFF92400E); 
+      bgColor = const Color(0xFFF59E0B); // Warna Amber
+      textColor = const Color(0xFF78350F); 
       icon = Icons.info_outline_rounded;
     }
 
@@ -123,15 +123,16 @@ class AuthController extends GetxController {
         style: GoogleFonts.hankenGrotesk(
           fontWeight: FontWeight.w500,
           fontSize: 14,
-          color: textColor.withOpacity(0.8),
+          color: textColor.withValues(alpha: 0.8),
         ),
       ),
       snackPosition: SnackPosition.TOP,
-      backgroundColor: bgColor,
+      // Ubah ke transparent dengan alpha rendah
+      backgroundColor: bgColor.withValues(alpha: 0.18),
       borderRadius: 16,
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
-      icon: Icon(icon, color: textColor, size: 28),
+      icon: Icon(icon, color: bgColor.withValues(alpha: 0.9), size: 28),
       shouldIconPulse: true,
       duration: const Duration(seconds: 4),
       isDismissible: true,

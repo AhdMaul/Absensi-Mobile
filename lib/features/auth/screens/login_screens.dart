@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_snackbar.dart';
 // Import widget tombol baru
 import '../../../core/widgets/premium_buttons.dart'; 
 import '../widgets/login_header.dart';
@@ -103,7 +104,11 @@ class _LoginScreenState extends State<LoginScreen>
                           text: 'Learn More', // Teks contoh untuk tombol kedua
                           onPressed: () {
                             // Aksi untuk tombol kedua (misal ke website)
-                            Get.snackbar("Info", "Fitur belum tersedia");
+                            AppSnackbar.show(
+                              "Info",
+                              "Fitur belum tersedia",
+                              type: 'info',
+                            );
                           },
                         ),
                       ],

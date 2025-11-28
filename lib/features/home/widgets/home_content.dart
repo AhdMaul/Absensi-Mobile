@@ -1,7 +1,9 @@
+// lib/features/home/widgets/home_content.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/home_controller.dart';
-import '../../../core/theme/app_colors.dart'; // Untuk skeleton
+import '../../../core/theme/app_colors.dart';
 import '../../../core/routes/app_routes.dart';
 import 'late_attendance_alert.dart';
 
@@ -11,6 +13,8 @@ import 'components/realtime_clock_card.dart';
 import 'components/attendance_action_button.dart';
 import 'components/attendance_status_cards.dart';
 import 'components/recent_activity_list.dart';
+// Import Widget Izin/Sakit yang baru dibuat
+import 'components/permission_buttons_row.dart'; 
 
 class HomeContent extends StatelessWidget {
   const HomeContent({super.key});
@@ -25,7 +29,7 @@ class HomeContent extends StatelessWidget {
         return _buildSkeleton();
       }
 
-      // Ambil info tombol
+      // Ambil info tombol utama (Hadir)
       final btnInfo = controller.getActionButtonInfo();
 
       return SingleChildScrollView(
@@ -37,7 +41,7 @@ class HomeContent extends StatelessWidget {
             HomeHeader(userName: controller.userName),
             const SizedBox(height: 24),
 
-            // Alert Telat
+            // Alert Telat (Jika ada)
             if (controller.isLate) ...[
               const LateAttendanceAlert(
                 message: "Anda telat hari ini. Jangan lupa disiplin besok ya!",
@@ -45,11 +49,11 @@ class HomeContent extends StatelessWidget {
               const SizedBox(height: 20),
             ],
 
-          // Jam Real-time
+            // Jam Real-time
             RealtimeClockCard(currentTime: controller.currentTime.value),
             const SizedBox(height: 20),
 
-            // Tombol Absensi (Animasi sudah di dalam widget ini)
+            // Tombol Absensi Utama (Hadir)
             AttendanceActionButton(
               text: btnInfo['text'],
               icon: btnInfo['icon'],
@@ -57,26 +61,32 @@ class HomeContent extends StatelessWidget {
               isCompleted: btnInfo['isCompleted'],
               onPressed: controller.navigateToAbsensi,
             ),
+            
+            // --- INTEGRASI BARU: Tombol Izin & Sakit ---
+            const SizedBox(height: 16), // Jarak dari tombol hadir
+            const PermissionButtonsRow(),
+            // -------------------------------------------
+
             const SizedBox(height: 28),
 
-            // Info Masuk/Pulang
+            // Info Waktu Masuk/Pulang
             AttendanceStatusCards(
               checkInTime: controller.todayCheckIn,
               checkOutTime: controller.todayCheckOut,
             ),
             const SizedBox(height: 32),
 
-            // Judul Aktivitas + tombol lihat semua
+            // Judul Aktivitas + Tombol Lihat Semua
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   "Aktivitas Hari Ini",
-                  style: TextStyle( // Atau pakai GoogleFonts
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary, // Pastikan import warna
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 TextButton(
@@ -109,7 +119,7 @@ class HomeContent extends StatelessWidget {
     });
   }
 
-  // Helper Skeleton (Bisa dipisah ke file sendiri juga jika mau)
+  // --- SKELETON LOADING (TIDAK BERUBAH) ---
   Widget _buildSkeleton() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 40.0),
@@ -141,8 +151,9 @@ class HomeContent extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.3),
+        color: Colors.white.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
       ),
     );
   }

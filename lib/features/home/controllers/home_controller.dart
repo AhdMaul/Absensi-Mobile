@@ -235,11 +235,17 @@ class HomeController extends GetxController {
       'Selamat Datang',
       'Login berhasil! Selamat bekerja.',
       snackPosition: SnackPosition.TOP,
-      backgroundColor: AppColors.neonGreen.withValues(alpha: 0.9),
-      colorText: Colors.white,
+      // Gunakan background yang lebih lembut agar tidak terlalu kontras
+      backgroundColor: AppColors.neonGreen.withValues(alpha: 0.18),
+      // Teks yang lebih gelap agar terbaca pada background lembut
+      colorText: AppColors.textPrimary,
       margin: const EdgeInsets.all(16),
       borderRadius: 12,
-      icon: const Icon(Icons.check_circle, color: Colors.white),
+      // Ikon diberi warna hijau neon yang sedikit lebih intens untuk aksen
+      icon: Icon(
+        Icons.check_circle,
+        color: AppColors.neonGreen.withValues(alpha: 0.9),
+      ),
       duration: const Duration(seconds: 3),
     );
   }

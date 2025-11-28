@@ -97,8 +97,15 @@ class _AbsenWidgetState extends State<AbsenWidget> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: AppColors.error,
+          content: Text(
+            'Error: ${e.toString()}',
+            style: GoogleFonts.hankenGrotesk(color: AppColors.error, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppColors.error.withValues(alpha: 0.18),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
         ),
       );
     }
@@ -140,7 +147,17 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         
         if (mounted && response['message'] != null) {
            ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text(response['message']), backgroundColor: Colors.green),
+             SnackBar(
+               content: Text(
+                 response['message'],
+                 style: GoogleFonts.hankenGrotesk(color: AppColors.neonGreen, fontWeight: FontWeight.w600),
+               ),
+               backgroundColor: AppColors.neonGreen.withValues(alpha: 0.18),
+               behavior: SnackBarBehavior.floating,
+               margin: const EdgeInsets.all(16),
+               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+               elevation: 2,
+             ),
            );
         }
 
@@ -148,14 +165,34 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         debugPrint("Gagal kirim data absensi: ${e.message}");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.message), backgroundColor: Colors.orange),
+            SnackBar(
+              content: Text(
+                e.message,
+                style: GoogleFonts.hankenGrotesk(color: Colors.orange.shade700, fontWeight: FontWeight.w600),
+              ),
+              backgroundColor: Colors.orange.withValues(alpha: 0.18),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+            ),
           );
         }
       } catch (e) {
         debugPrint("Error tak terduga: $e");
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error sistem: $e'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text(
+                'Error sistem: $e',
+                style: GoogleFonts.hankenGrotesk(color: AppColors.error, fontWeight: FontWeight.w600),
+              ),
+              backgroundColor: AppColors.error.withValues(alpha: 0.18),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+            ),
           );
         }
       }
