@@ -103,21 +103,26 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
     }
   }
 
+  // --- BAGIAN YANG DIPERBAIKI ---
   Future<void> _handleVerification(XFile imageToVerify) async {
     setState(() => _isLoadingVerification = true);
 
     try {
       final result = await _faceService.verifyFace(imageToVerify);
       
+      // Print log untuk debugging logika UI
+      print("UI Logic -> Verification Result: verified=${result.verified}, message=${result.message}");
+      
       if (result.verified) {
         _breathingController.stop(); 
         _scanController.stop();
         widget.onVerificationSuccess(result, DateTime.now());
       } else {
-        _resetProcess("Wajah tidak cocok. Coba lagi.", isError: true);
+        // Tampilkan pesan error spesifik dari server/model
+        _resetProcess(result.message, isError: true);
       }
     } catch (e) {
-      _resetProcess("Wajah tidak terdeteksi.", isError: true);
+      _resetProcess("Terjadi kesalahan sistem.", isError: true);
     }
   }
 
@@ -153,7 +158,6 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                // FIX: Gunakan withValues
                 color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
@@ -195,7 +199,6 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            // FIX: Gunakan withValues
                             color: Colors.black.withValues(alpha: 0.3),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1),
@@ -213,7 +216,6 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         decoration: BoxDecoration(
-                          // FIX: Gunakan withValues
                           color: Colors.black.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(30),
                           border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
@@ -267,7 +269,6 @@ class TechFaceOverlayPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
     
-    // FIX: Gunakan withValues
     final bgPaint = Paint()..color = Colors.black.withValues(alpha: 0.7);
     final backgroundPath = Path()..addRect(rect);
 
@@ -285,7 +286,6 @@ class TechFaceOverlayPainter extends CustomPainter {
     canvas.drawPath(maskPath, bgPaint);
 
     final outlinePaint = Paint()
-      // FIX: Gunakan withValues
       ..color = isLoading ? AppColors.neonGreen : Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
@@ -301,7 +301,6 @@ class TechFaceOverlayPainter extends CustomPainter {
     final double cornerLen = 30;
     final double gap = 20;
 
-    // Gambar sudut-sudut (Sama seperti sebelumnya)
     canvas.drawLine(Offset(ovalLeft - gap, ovalTop - gap + cornerLen), Offset(ovalLeft - gap, ovalTop - gap), cornerPaint);
     canvas.drawLine(Offset(ovalLeft - gap, ovalTop - gap), Offset(ovalLeft - gap + cornerLen, ovalTop - gap), cornerPaint);
     canvas.drawLine(Offset(faceRect.right + gap - cornerLen, ovalTop - gap), Offset(faceRect.right + gap, ovalTop - gap), cornerPaint);
@@ -317,7 +316,6 @@ class TechFaceOverlayPainter extends CustomPainter {
       final scanPaint = Paint()
         ..shader = LinearGradient(
           colors: [
-            // FIX: Gunakan withValues
             AppColors.neonGreen.withValues(alpha: 0),
             AppColors.neonGreen.withValues(alpha: 0.8),
             AppColors.neonGreen.withValues(alpha: 0),
@@ -328,12 +326,9 @@ class TechFaceOverlayPainter extends CustomPainter {
     }
   }
 
-  // --- FUNGSI YANG DIPERBAIKI ---
   void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
-    // Menggunakan ui.PathMetrics
     final ui.PathMetrics pathMetrics = path.computeMetrics();
     
-    // Menggunakan ui.PathMetric
     for (final ui.PathMetric pathMetric in pathMetrics) {
       double distance = 0.0;
       while (distance < pathMetric.length) {

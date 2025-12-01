@@ -11,17 +11,20 @@ class FaceRecognitionService {
       final imageBytes = await imageFile.readAsBytes();
       final imageBase64 = base64Encode(imageBytes);
 
-      // PERBAIKAN: Tembak LANGSUNG ke FastAPI
-      // Gunakan method khusus postUrlEncodedFastAPI (jika ada di ApiBase)
-      // Atau post biasa dengan useExpress: false
-      
-      final responseBody = await _apiBase.postUrlEncodedFastAPI( // Pastikan method ini ada di ApiBase
-        '/recognize', 
+      print('Sending face verify request, image bytes: ${imageBytes.length}');
+
+      // Kirim sebagai Form URL Encoded sesuai kebutuhan endpoint FastAPI
+      final responseBody = await _apiBase.postUrlEncodedFastAPI(
+        '/recognize',
         body: {
-          'image_base64': imageBase64, // FastAPI butuh key ini
+          'image_base64': imageBase64,
         },
-        // Tidak perlu useExpress: true karena ini ke FastAPI
       );
+
+      // --- LOG DEBUGGING TAMBAHAN ---
+      // Lihat output ini di Debug Console untuk mengetahui struktur JSON asli
+      print(">>> RAW RESPONSE DARI SERVER: $responseBody");
+      // ------------------------------
 
       return VerificationResultModel.fromJson(responseBody);
 

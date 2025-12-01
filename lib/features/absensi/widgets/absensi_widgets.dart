@@ -1,3 +1,5 @@
+// lib/features/absensi/widgets/absensi_widgets.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -34,7 +36,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
   
   // Hasil Akhir
   String? _finalAbsensiMessage;
-  // Color? _finalAbsensiColor; // (Unused field removed)
   Position? _currentPosition;
 
   DateTime _currentTime = DateTime.now();
@@ -47,7 +48,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
        if (mounted) setState(() => _currentTime = DateTime.now());
     });
-    // _loadUserId(); // (Unused function removed)
   }
 
   @override
@@ -95,17 +95,27 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         _isGettingLocation = false;
         _locationMessage = 'Gagal deteksi lokasi. Pastikan GPS aktif.';
       });
+      
+      // --- SNACKBAR ERROR (SOLID MERAH) ---
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Error: ${e.toString()}',
-            style: GoogleFonts.hankenGrotesk(color: AppColors.error, fontWeight: FontWeight.w600),
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Error: ${e.toString()}',
+                  style: GoogleFonts.hankenGrotesk(color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
-          backgroundColor: AppColors.error.withValues(alpha: 0.18),
+          backgroundColor: const Color(0xFFD32F2F), // MERAH SOLID
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 2,
+          elevation: 4,
         ),
       );
     }
@@ -116,7 +126,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
 
     setState(() {
       _finalAbsensiMessage = "Absensi Berhasil!\nPukul $formattedTime";
-      // _finalAbsensiColor = AppColors.neonGreen; // (Unused)
       _showCameraStep = false;
     });
 
@@ -133,8 +142,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
   Future<void> _sendAttendanceData(DateTime captureTime) async {
     if (_currentPosition != null) {
       try {
-        // --- PERBAIKAN PANGGILAN SERVICE ---
-        // Menggunakan parameter terpisah, bukan model
         final response = await _attendanceService.submitAttendance(
           latitude: _currentPosition!.latitude,
           longitude: _currentPosition!.longitude,
@@ -142,21 +149,29 @@ class _AbsenWidgetState extends State<AbsenWidget> {
           timestampForLog: captureTime,
         );
         
-        // Gunakan debugPrint agar tidak warning avoid_print
         debugPrint("Data absensi terkirim. Response: ${response['message']}");
         
         if (mounted && response['message'] != null) {
+           // --- SNACKBAR SUKSES (SOLID HIJAU) ---
            ScaffoldMessenger.of(context).showSnackBar(
              SnackBar(
-               content: Text(
-                 response['message'],
-                 style: GoogleFonts.hankenGrotesk(color: AppColors.neonGreen, fontWeight: FontWeight.w600),
+               content: Row(
+                 children: [
+                   const Icon(Icons.check_circle_outline, color: Colors.white),
+                   const SizedBox(width: 12),
+                   Expanded(
+                     child: Text(
+                       response['message'],
+                       style: GoogleFonts.hankenGrotesk(color: Colors.white, fontWeight: FontWeight.w700),
+                     ),
+                   ),
+                 ],
                ),
-               backgroundColor: AppColors.neonGreen.withValues(alpha: 0.18),
+               backgroundColor: const Color(0xFF10B981), // HIJAU SOLID
                behavior: SnackBarBehavior.floating,
                margin: const EdgeInsets.all(16),
                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-               elevation: 2,
+               elevation: 4,
              ),
            );
         }
@@ -164,17 +179,26 @@ class _AbsenWidgetState extends State<AbsenWidget> {
       } on ApiException catch (e) {
         debugPrint("Gagal kirim data absensi: ${e.message}");
         if (mounted) {
+          // --- SNACKBAR WARNING (SOLID ORANGE) ---
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                e.message,
-                style: GoogleFonts.hankenGrotesk(color: Colors.orange.shade700, fontWeight: FontWeight.w600),
+              content: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      e.message,
+                      style: GoogleFonts.hankenGrotesk(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ),
-              backgroundColor: Colors.orange.withValues(alpha: 0.18),
+              backgroundColor: const Color(0xFFF59E0B), // ORANGE SOLID
               behavior: SnackBarBehavior.floating,
               margin: const EdgeInsets.all(16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
+              elevation: 4,
             ),
           );
         }
@@ -183,15 +207,23 @@ class _AbsenWidgetState extends State<AbsenWidget> {
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'Error sistem: $e',
-                style: GoogleFonts.hankenGrotesk(color: AppColors.error, fontWeight: FontWeight.w600),
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Error sistem: $e',
+                      style: GoogleFonts.hankenGrotesk(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ),
-              backgroundColor: AppColors.error.withValues(alpha: 0.18),
+              backgroundColor: const Color(0xFFD32F2F), // MERAH SOLID
               behavior: SnackBarBehavior.floating,
               margin: const EdgeInsets.all(16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
+              elevation: 4,
             ),
           );
         }
@@ -233,7 +265,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
               border: Border.all(color: AppColors.neonGreen, width: 2),
               boxShadow: [
                 BoxShadow(
-                  // Perbaikan withValues
                   color: AppColors.neonGreen.withValues(alpha: 0.2),
                   blurRadius: 20, offset: const Offset(0, 10),
                 )
@@ -340,7 +371,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        // Perbaikan withValues
         color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
@@ -357,7 +387,6 @@ class _AbsenWidgetState extends State<AbsenWidget> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  // Perbaikan withValues
                   color: isCompleted ? AppColors.neonGreen.withValues(alpha: 0.1) : Colors.grey.shade100,
                   shape: BoxShape.circle,
                 ),

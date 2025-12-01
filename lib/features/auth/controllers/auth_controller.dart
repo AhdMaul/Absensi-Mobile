@@ -1,3 +1,4 @@
+// lib/features/auth/controllers/auth_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,7 +22,7 @@ class AuthController extends GetxController {
 
     // --- 1. Validasi Input Kosong ---
     if (email.isEmpty) {
-      _showSoftSnackbar(
+      _showSolidSnackbar(
         title: "Email Belum Diisi",
         message: "Mohon isi alamat email kamu dulu ya.",
         type: 'warning',
@@ -30,7 +31,7 @@ class AuthController extends GetxController {
     }
 
     if (password.isEmpty) {
-      _showSoftSnackbar(
+      _showSolidSnackbar(
         title: "Password Kosong",
         message: "Jangan lupa masukkan kata sandi kamu ya.",
         type: 'warning',
@@ -49,13 +50,8 @@ class AuthController extends GetxController {
         // SUKSES
         Get.offAllNamed(AppRoutes.home, arguments: {'showWelcome': true});
       } else {
-        // GAGAL (Bisa karena salah password ATAU backend mati)
-        // Kita cek isi pesan error dari response untuk membedakan
-        
+        // GAGAL
         String errorMsg = response.message.toLowerCase();
-
-        // Cek kata kunci error dari backend (sesuaikan dengan return API backendmu)
-        // Biasanya: "Email atau password salah", "User not found", "401", dll.
         bool isCredentialError = errorMsg.contains('salah') || 
                                  errorMsg.contains('email') || 
                                  errorMsg.contains('password') ||
@@ -63,27 +59,23 @@ class AuthController extends GetxController {
                                  errorMsg.contains('credential');
 
         if (isCredentialError) {
-          // KASUS 1: Salah Password / Email
-          _showSoftSnackbar(
+          _showSolidSnackbar(
             title: "Gagal Masuk",
-            message: "Hmm, sepertinya email atau kata sandi kurang tepat. Coba dicek lagi ya.",
+            message: "Email atau kata sandi salah. Silakan cek kembali.",
             type: 'error',
           );
         } else {
-          // KASUS 2: Error Lain (Backend Mati / Koneksi)
-          // response.message berisi "Connection refused" dll.
-          _showSoftSnackbar(
+          _showSolidSnackbar(
             title: "Ada Kendala",
-            message: "Maaf, sepertinya server sedang istirahat atau koneksi bermasalah. Coba lagi nanti ya.",
+            message: "Koneksi bermasalah atau server sibuk. Coba lagi nanti.",
             type: 'error',
           );
         }
       }
     } catch (e) {
-      // Error Sistem/Jaringan yang tidak tertangkap di Service
-      _showSoftSnackbar(
+      _showSolidSnackbar(
         title: "Ada Kendala",
-        message: "Maaf, sistem sedang sibuk atau koneksi terputus. Coba sesaat lagi ya.",
+        message: "Terjadi kesalahan sistem. Coba sesaat lagi.",
         type: 'error',
       );
     } finally {
@@ -91,20 +83,17 @@ class AuthController extends GetxController {
     }
   }
   
-  // --- Helper Widget: Snackbar Ramah ---
-  void _showSoftSnackbar({required String title, required String message, required String type}) {
-    Color bgColor;
-    Color textColor;
+  // --- HELPER: SOLID SNACKBAR (Jelas & Terbaca) ---
+  void _showSolidSnackbar({required String title, required String message, required String type}) {
+    Color accentColor;
     IconData icon;
 
     if (type == 'error') {
-      bgColor = const Color(0xFFEF4444); // Warna Merah
-      textColor = const Color(0xFF7F1D1D); 
-      icon = Icons.sentiment_dissatisfied_rounded;
+      accentColor = const Color(0xFFD32F2F); // Merah Solid
+      icon = Icons.cancel_rounded;
     } else { // warning
-      bgColor = const Color(0xFFF59E0B); // Warna Amber
-      textColor = const Color(0xFF78350F); 
-      icon = Icons.info_outline_rounded;
+      accentColor = const Color(0xFFF59E0B); // Kuning Gelap Solid
+      icon = Icons.info_rounded;
     }
 
     Get.snackbar(
@@ -115,7 +104,7 @@ class AuthController extends GetxController {
         style: GoogleFonts.hankenGrotesk(
           fontWeight: FontWeight.bold,
           fontSize: 16,
-          color: textColor,
+          color: Colors.black87, // Judul Hitam Pekat
         ),
       ),
       messageText: Text(
@@ -123,23 +112,28 @@ class AuthController extends GetxController {
         style: GoogleFonts.hankenGrotesk(
           fontWeight: FontWeight.w500,
           fontSize: 14,
-          color: textColor.withValues(alpha: 0.8),
+          color: Colors.black54, // Isi Abu Gelap (Kontras di Putih)
         ),
       ),
       snackPosition: SnackPosition.TOP,
-      // Ubah ke transparent dengan alpha rendah
-      backgroundColor: bgColor.withValues(alpha: 0.18),
-      borderRadius: 16,
+      
+      // TAMPILAN SOLID
+      backgroundColor: Colors.white, 
+      borderRadius: 12,
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
-      icon: Icon(icon, color: bgColor.withValues(alpha: 0.9), size: 28),
-      shouldIconPulse: true,
+      
+      // Indikator Warna di Kiri
+      leftBarIndicatorColor: accentColor,
+      
+      icon: Icon(icon, color: accentColor, size: 28),
+      shouldIconPulse: false,
       duration: const Duration(seconds: 4),
       isDismissible: true,
       boxShadows: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 20,
+          color: Colors.black.withOpacity(0.15),
+          blurRadius: 15,
           offset: const Offset(0, 4),
         )
       ],

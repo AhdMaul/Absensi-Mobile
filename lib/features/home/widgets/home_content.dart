@@ -7,14 +7,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/routes/app_routes.dart';
 import 'late_attendance_alert.dart';
 
-// Import Komponen yang sudah dipecah
+// Import Komponen
 import 'components/home_header.dart';
 import 'components/realtime_clock_card.dart';
 import 'components/attendance_action_button.dart';
 import 'components/attendance_status_cards.dart';
 import 'components/recent_activity_list.dart';
-// Import Widget Izin/Sakit yang baru dibuat
-import 'components/permission_buttons_row.dart'; 
+import 'components/permission_buttons_row.dart'; // Import Tombol Izin
 
 class HomeContent extends StatelessWidget {
   const HomeContent({super.key});
@@ -24,12 +23,12 @@ class HomeContent extends StatelessWidget {
     final controller = Get.find<HomeController>();
 
     return Obx(() {
-      // 1. Skeleton Loading
+      // 1. Skeleton Loading saat data sedang diambil
       if (controller.isLoading.value) {
         return _buildSkeleton();
       }
 
-      // Ambil info tombol utama (Hadir)
+      // Ambil status tombol utama (Absen Masuk/Pulang)
       final btnInfo = controller.getActionButtonInfo();
 
       return SingleChildScrollView(
@@ -37,11 +36,11 @@ class HomeContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header Nama
+            // --- HEADER ---
             HomeHeader(userName: controller.userName),
             const SizedBox(height: 24),
 
-            // Alert Telat (Jika ada)
+            // --- ALERT TELAT (Opsional) ---
             if (controller.isLate) ...[
               const LateAttendanceAlert(
                 message: "Anda telat hari ini. Jangan lupa disiplin besok ya!",
@@ -49,11 +48,11 @@ class HomeContent extends StatelessWidget {
               const SizedBox(height: 20),
             ],
 
-            // Jam Real-time
+            // --- JAM DIGITAL ---
             RealtimeClockCard(currentTime: controller.currentTime.value),
             const SizedBox(height: 20),
 
-            // Tombol Absensi Utama (Hadir)
+            // --- TOMBOL UTAMA (ABSEN MASUK/PULANG) ---
             AttendanceActionButton(
               text: btnInfo['text'],
               icon: btnInfo['icon'],
@@ -62,26 +61,26 @@ class HomeContent extends StatelessWidget {
               onPressed: controller.navigateToAbsensi,
             ),
             
-            // --- INTEGRASI BARU: Tombol Izin & Sakit ---
-            const SizedBox(height: 16), // Jarak dari tombol hadir
-            const PermissionButtonsRow(),
-            // -------------------------------------------
+            // --- TOMBOL IZIN & SAKIT (Fitur Baru) ---
+            const SizedBox(height: 16), 
+            const PermissionButtonsRow(), 
+            // ----------------------------------------
 
             const SizedBox(height: 28),
 
-            // Info Waktu Masuk/Pulang
+            // --- KARTU STATUS (Waktu Masuk & Pulang) ---
             AttendanceStatusCards(
               checkInTime: controller.todayCheckIn,
               checkOutTime: controller.todayCheckOut,
             ),
             const SizedBox(height: 32),
 
-            // Judul Aktivitas + Tombol Lihat Semua
+            // --- JUDUL AKTIVITAS ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   "Aktivitas Hari Ini",
                   style: TextStyle(
                     fontSize: 20,
@@ -95,7 +94,7 @@ class HomeContent extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    backgroundColor: AppColors.neonCyan.withValues(alpha: 0.1),
+                    backgroundColor: AppColors.neonCyan.withOpacity(0.1),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
                   child: Text(
@@ -103,7 +102,7 @@ class HomeContent extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.neonCyan.withValues(alpha: 1.0),
+                      color: AppColors.neonCyan.withOpacity(1.0),
                     ),
                   ),
                 ),
@@ -111,7 +110,7 @@ class HomeContent extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // List Aktivitas
+            // --- LIST AKTIVITAS TERAKHIR ---
             RecentActivityList(activities: controller.recentActivities),
           ],
         ),
@@ -119,7 +118,7 @@ class HomeContent extends StatelessWidget {
     });
   }
 
-  // --- SKELETON LOADING (TIDAK BERUBAH) ---
+  // --- SKELETON LOADING ---
   Widget _buildSkeleton() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 40.0),
@@ -151,9 +150,9 @@ class HomeContent extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.6),
+        color: Colors.white.withOpacity(0.6),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
       ),
     );
   }

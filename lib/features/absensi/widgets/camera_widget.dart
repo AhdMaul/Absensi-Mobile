@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 class CameraWidget extends StatefulWidget {
   final Function(XFile? imageFile)? onPictureTaken;
-  final Function(bool isReady)? onCameraReady; // Callback saat kamera siap
+  final Function(bool isReady)? onCameraReady; 
 
   const CameraWidget({
     this.onPictureTaken,
@@ -38,7 +38,6 @@ class _CameraWidgetState extends State<CameraWidget> {
       final cameras = await availableCameras();
       if (cameras.isEmpty) return;
 
-      // Cari kamera depan
       final frontCamera = cameras.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
@@ -46,7 +45,10 @@ class _CameraWidgetState extends State<CameraWidget> {
 
       controller = CameraController(
         frontCamera,
-        ResolutionPreset.high, // Gunakan High agar tajam
+        // --- PERBAIKAN DI SINI ---
+        // Ganti 'high' ke 'medium'. 'high' membuat base64 terlalu besar
+        // sehingga server kehabisan RAM (Error 500) saat decode.
+        ResolutionPreset.medium, 
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
@@ -55,7 +57,6 @@ class _CameraWidgetState extends State<CameraWidget> {
 
       if (mounted) {
         setState(() => _isCameraInitialized = true);
-        // Beritahu parent bahwa kamera siap untuk memulai countdown
         widget.onCameraReady?.call(true);
       }
     } catch (e) {
@@ -63,7 +64,6 @@ class _CameraWidgetState extends State<CameraWidget> {
     }
   }
 
-  // Fungsi publik untuk dipanggil parent
   Future<void> takePicture() async {
     if (!_isCameraInitialized || controller == null) return;
     if (controller!.value.isTakingPicture) return;
@@ -86,20 +86,12 @@ class _CameraWidgetState extends State<CameraWidget> {
       );
     }
 
-    // --- LOGIKA ANTI-GEPENG (COVER) ---
     return LayoutBuilder(
       builder: (context, constraints) {
         var scale = 1.0;
-        
-        // Hitung aspect ratio kamera vs layar
-        // Kamera biasanya landscape (4:3 atau 16:9), tapi di HP tampil portrait.
-        // Kita perlu menukar width/height kamera untuk perbandingan.
         final cameraAspectRatio = controller!.value.aspectRatio;
         final screenAspectRatio = constraints.maxWidth / constraints.maxHeight;
 
-        // Karena kamera depan biasanya mirrored dan orientasinya beda,
-        // logika scale ini memastikan gambar mengisi penuh kotak (cover)
-        // tanpa terdistorsi.
         scale = 1 / (cameraAspectRatio * screenAspectRatio); 
         if (scale < 1) scale = 1 / scale;
 

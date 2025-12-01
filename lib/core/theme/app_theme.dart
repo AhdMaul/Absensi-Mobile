@@ -1,29 +1,48 @@
 // lib/core/theme/app_theme.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'app_colors.dart'; // <-- Pastikan import ini ada
+import 'app_colors.dart'; 
 
 class AppTheme {
-  // Kita buat getter static agar mudah dipanggil
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      
-      // Mengatur warna dasar aplikasi
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primaryButton, // Menggunakan Orange sebagai seed
-        primary: AppColors.primaryButton,
+        seedColor: AppColors.primaryButton,
+        primary: AppColors.primaryButton, // Warna tombol OK/Cancel
         secondary: AppColors.textPrimary,
         error: AppColors.error,
         surface: Colors.white,
+        onSurface: AppColors.textPrimary, // Warna teks tanggal
       ),
-      
-      scaffoldBackgroundColor: Colors.white, // Default putih, nanti ditimpa gradient
-
-      // Mengatur Font Default ke Hanken Grotesk
+      scaffoldBackgroundColor: Colors.white,
       textTheme: GoogleFonts.hankenGroteskTextTheme(),
-      
-      // Style Input Field Global (Cadangan jika widget custom gagal)
+
+      // --- TAMBAHAN: CUSTOM DATE PICKER THEME ---
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: Colors.white,
+        headerBackgroundColor: AppColors.buttonBlack, // Header jadi Hitam
+        headerForegroundColor: Colors.white, // Teks header Putih
+        // Warna lingkaran tanggal yang dipilih
+        dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.neonCyan; 
+          }
+          return null;
+        }),
+        dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+           if (states.contains(WidgetState.selected)) {
+            return Colors.white; 
+          }
+          return AppColors.textPrimary;
+        }),
+        todayBackgroundColor: WidgetStateProperty.all(AppColors.inputFill),
+        todayForegroundColor: WidgetStateProperty.all(AppColors.primaryButton),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      // -------------------------------------------
+
+      // ... (sisa kode inputDecorationTheme dan elevatedButtonTheme biarkan sama)
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.inputFill,
@@ -45,8 +64,6 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.error),
         ),
       ),
-
-      // Style Button Global
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryButton,

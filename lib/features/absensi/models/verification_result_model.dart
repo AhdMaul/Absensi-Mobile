@@ -2,17 +2,17 @@ class VerificationResultModel {
   final bool verified;
   final String message;
 
-
   VerificationResultModel({
     required this.verified,
     required this.message,
-    // this.recognizedUserName,
   });
 
   factory VerificationResultModel.fromJson(Map<String, dynamic> json) {
     return VerificationResultModel(
-      verified: json['verified'] ?? false,
-      message: json['message'] ?? 'Status verifikasi tidak diketahui',
+      // Cek berbagai kemungkinan key agar lebih aman (verified/success/status)
+      verified: json['verified'] ?? json['success'] ?? json['status'] ?? false,
+      // Cek berbagai kemungkinan key pesan (message/msg/detail)
+      message: json['message'] ?? json['msg'] ?? json['detail'] ?? 'Status verifikasi tidak diketahui',
     );
   }
 }

@@ -1,55 +1,64 @@
+// lib/core/utils/app_snackbar.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../theme/app_colors.dart';
 
-/// AppSnackbar matches the project's snackbar style: colored but semi-transparent.
 class AppSnackbar {
-	/// Show a snackbar with a soft colored, semi-transparent background.
-	/// [type] supports: 'info' (default), 'success', 'error', 'warning'.
-	static void show(String title, String message, {String type = 'info'}) {
-		Color bgColor;
-		IconData iconData;
+  static void show(String title, String message, {String type = 'info'}) {
+    Color accentColor;
+    IconData iconData;
 
-		switch (type) {
-			case 'error':
-				bgColor = AppColors.error.withValues(alpha: 0.18);
-				iconData = Icons.error;
-				break;
-			case 'success':
-				bgColor = AppColors.neonGreen.withValues(alpha: 0.18);
-				iconData = Icons.check_circle;
-				break;
-					case 'warning':
-						bgColor = Colors.orange.withValues(alpha: 0.18);
-						iconData = Icons.warning;
-						break;
-			default:
-				// info
-				bgColor = AppColors.neonCyan.withValues(alpha: 0.18);
-				iconData = Icons.info;
-		}
+    switch (type) {
+      case 'error':
+        accentColor = AppColors.error;
+        iconData = Icons.error_rounded;
+        break;
+      case 'success':
+        accentColor = AppColors.neonGreen; 
+        iconData = Icons.check_circle_rounded;
+        break;
+      case 'warning':
+        accentColor = const Color(0xFFF59E0B); // Amber
+        iconData = Icons.warning_rounded;
+        break;
+      default:
+        // info
+        accentColor = AppColors.neonCyan;
+        iconData = Icons.info_rounded;
+    }
 
-		Get.snackbar(
-			title,
-			message,
-			snackPosition: SnackPosition.BOTTOM,
-			snackStyle: SnackStyle.FLOATING,
-			backgroundColor: bgColor,
-			// Use primary text color so the message remains readable on soft backgrounds
-			colorText: AppColors.textPrimary,
-			margin: const EdgeInsets.all(16),
-			borderRadius: 12,
-			icon: Icon(
-				iconData,
-				color: // make icon pop a bit more than background
-						(type == 'error')
-								? AppColors.error.withValues(alpha: 0.9)
-								: (type == 'success')
-										? AppColors.neonGreen.withValues(alpha: 0.9)
-										: AppColors.neonCyan.withValues(alpha: 0.9),
-			),
-			duration: const Duration(seconds: 3),
-		);
-	}
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.TOP, // Tampil di atas agar eye-catching
+      snackStyle: SnackStyle.FLOATING,
+      
+      // --- PERUBAHAN TAMPILAN (SOLID & JELAS) ---
+      backgroundColor: Colors.white, // Background Putih Solid (JELAS)
+      colorText: AppColors.textPrimary, // Teks Hitam (KONTRAS)
+      
+      // Border agar terpisah dari background aplikasi
+      borderColor: accentColor.withOpacity(0.5),
+      borderWidth: 1.5,
+      
+      // Shadow agar terlihat "melayang"
+      boxShadows: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+      
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+      icon: Icon(
+        iconData,
+        color: accentColor, // Icon berwarna sesuai tipe
+        size: 28,
+      ),
+      shouldIconPulse: false, 
+      duration: const Duration(seconds: 3),
+    );
+  }
 }

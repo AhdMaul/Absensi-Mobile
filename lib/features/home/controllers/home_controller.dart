@@ -108,7 +108,6 @@ class HomeController extends GetxController {
 
       // Logika Status Absensi
       if (todayRecords.isNotEmpty) {
-        // Cek telat dari record PERTAMA
         final firstRecord = todayRecords.first;
         final clockInDt = DateTime.parse(firstRecord['clockIn']).toLocal();
         
@@ -116,7 +115,6 @@ class HomeController extends GetxController {
            lateStatus = true;
         }
 
-        // Cek record TERAKHIR untuk menentukan status tombol saat ini
         final lastRecord = todayRecords.last;
         
         if (lastRecord['clockIn'] != null) {
@@ -124,13 +122,9 @@ class HomeController extends GetxController {
         }
         
         if (lastRecord['clockOut'] != null) {
-           // Sesi terakhir SUDAH ditutup (Clock Out)
-           // Artinya user sedang "di luar" -> Siap untuk masuk lagi (Shift Baru/Lanjut)
            displayCheckOut = DateFormat('HH:mm').format(DateTime.parse(lastRecord['clockOut']).toLocal());
            currentlyCheckedIn = false; 
         } else {
-           // Sesi terakhir BELUM ditutup (Masih null)
-           // Artinya user sedang "kerja" -> Siap untuk Absen Pulang
            displayCheckOut = "--:--"; 
            currentlyCheckedIn = true; 
         }
@@ -178,13 +172,11 @@ class HomeController extends GetxController {
     }
   }
 
-  // --- LOGIKA TOMBOL ABSENSI (UPDATED) ---
+  // --- LOGIKA TOMBOL ABSENSI ---
   Map<String, dynamic> getActionButtonInfo() {
     String text;
     IconData icon;
     Color color;
-    
-    // Kita set false agar tombol TIDAK PERNAH mati (bisa multi-shift)
     bool isCompleted = false; 
 
     final isCurrentlyCheckedIn = dashboardData.value.isCurrentlyCheckedIn;
@@ -192,24 +184,18 @@ class HomeController extends GetxController {
     final hasCheckOut = dashboardData.value.lastCheckOutTime != null;
 
     if (isCurrentlyCheckedIn) {
-      // KONDISI 1: SEDANG KERJA (Tombol jadi 'Absen Pulang')
       text = "Absen Pulang";
       icon = Icons.logout_rounded;
-      // Gunakan warna kontras untuk 'Stop/Keluar', misal Orange/Merah
       color = Colors.orange.shade800; 
     } else {
-      // SEDANG TIDAK KERJA
       if (hasCheckIn && hasCheckOut) {
-        // KONDISI 2: SUDAH PERNAH MASUK & KELUAR HARI INI (Re-entry)
         text = "Masuk Lagi"; 
-        icon = Icons.update_rounded; // Icon refresh/cycle
-        // Warna Ungu/Indigo sebagai penanda ini sesi tambahan
+        icon = Icons.update_rounded; 
         color = const Color(0xFF6C63FF); 
       } else {
-        // KONDISI 3: BELUM ADA ABSEN HARI INI (Fresh Start)
         text = "Absen Masuk";
         icon = Icons.login_rounded;
-        color = AppColors.neonGreen; // Warna Hijau Fresh
+        color = AppColors.neonGreen; 
       }
     }
 
@@ -229,23 +215,36 @@ class HomeController extends GetxController {
     }
   }
 
-  // --- FUNGSI YANG HILANG (DIKEMBALIKAN) ---
+  // --- WELCOME SNACKBAR (SOLID STYLE) ---
   void showWelcomeSnackbar() {
     Get.snackbar(
       'Selamat Datang',
       'Login berhasil! Selamat bekerja.',
       snackPosition: SnackPosition.TOP,
-      // Gunakan background yang lebih lembut agar tidak terlalu kontras
-      backgroundColor: AppColors.neonGreen.withValues(alpha: 0.18),
-      // Teks yang lebih gelap agar terbaca pada background lembut
-      colorText: AppColors.textPrimary,
+      
+      // TAMPILAN SOLID PUTIH
+      backgroundColor: Colors.white,
+      colorText: AppColors.textPrimary, // Teks Hitam
+      
       margin: const EdgeInsets.all(16),
       borderRadius: 12,
-      // Ikon diberi warna hijau neon yang sedikit lebih intens untuk aksen
+      
+      // Border Hijau Tipis
+      borderColor: AppColors.neonGreen,
+      borderWidth: 1.0,
+      
       icon: Icon(
-        Icons.check_circle,
-        color: AppColors.neonGreen.withValues(alpha: 0.9),
+        Icons.check_circle_rounded,
+        color: AppColors.neonGreen, // Ikon Hijau Jelas
+        size: 28,
       ),
+      boxShadows: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        )
+      ],
       duration: const Duration(seconds: 3),
     );
   }
