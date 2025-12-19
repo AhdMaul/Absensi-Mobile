@@ -1,11 +1,20 @@
-import 'dart:io'; 
+// lib/features/home/widgets/components/permission_form_modal.dart
+
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:file_picker/file_picker.dart'; 
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/theme/app_colors.dart';
-// Pastikan path ini sesuai dengan struktur project Anda
-import '../../services/permission_service.dart'; 
+import '../../services/permission_service.dart';
+
+// Subcomponents (Pastikan path import ini sesuai dengan struktur folder kamu)
+import 'permission_form/toggle.dart';
+import 'permission_form/date_range_field.dart';
+import 'permission_form/reason_input.dart';
+import 'permission_form/upload_area.dart';
+import 'permission_form/submit_button.dart';
 
 class PermissionFormModal extends StatefulWidget {
   final bool initialIsSick;
@@ -18,9 +27,9 @@ class PermissionFormModal extends StatefulWidget {
 
 class _PermissionFormModalState extends State<PermissionFormModal> {
   late bool isSick;
-  DateTime? selectedDate;
-  
-  // State untuk File
+
+  // State untuk Data Form
+  DateTimeRange? _selectedDateRange;
   PlatformFile? _selectedFile;
   String? _fileName;
 
@@ -45,12 +54,60 @@ class _PermissionFormModalState extends State<PermissionFormModal> {
     super.dispose();
   }
 
-  // --- FUNGSI PILIH FILE ---
+  // --- LOGIC: DATE PICKER ---
+  Future<void> _pickDateRange() async {
+    final DateTime now = DateTime.now();
+
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: now.subtract(const Duration(days: 30)),
+      lastDate: now.add(const Duration(days: 90)),
+      initialDateRange: _selectedDateRange,
+      saveText: "PILIH",
+      cancelText: "BATAL",
+      helpText: "PILIH RENTANG TANGGAL",
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: AppColors.neonCyan,
+            scaffoldBackgroundColor: Colors.white,
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.neonCyan,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: AppColors.textPrimary,
+              secondary: Color(0xFFE0F2FE),
+            ),
+            appBarTheme: AppBarTheme(
+              backgroundColor: AppColors.neonCyan,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: Colors.white),
+              titleTextStyle: GoogleFonts.hankenGrotesk(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDateRange = picked;
+      });
+    }
+  }
+
+  // --- LOGIC: FILE PICKER ---
   Future<void> _pickFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['jpg', 'png', 'jpeg', 'pdf'], 
+        allowedExtensions: ['jpg', 'png', 'jpeg', 'pdf'],
       );
 
       if (result != null) {
@@ -61,10 +118,10 @@ class _PermissionFormModalState extends State<PermissionFormModal> {
       }
     } catch (e) {
       debugPrint("Gagal mengambil file: $e");
+      _showSnackbar("Gagal memilih file", isError: true);
     }
   }
 
-  // --- FUNGSI HAPUS FILE ---
   void _clearFile() {
     setState(() {
       _selectedFile = null;
@@ -72,54 +129,67 @@ class _PermissionFormModalState extends State<PermissionFormModal> {
     });
   }
 
-  // --- FUNGSI KIRIM DATA KE BACKEND (BARU) ---
+  // --- LOGIC: SUBMIT DATA ---
   Future<void> _submitData() async {
     // 1. Validasi Input
-    if (selectedDate == null) {
-      _showSnackbar("Mohon pilih tanggal mulai.", isError: true);
+    if (_selectedDateRange == null) {
+      _showSnackbar("Mohon pilih rentang tanggal.", isError: true);
       return;
     }
     if (_reasonController.text.trim().isEmpty) {
       _showSnackbar("Mohon isi keterangan/alasan.", isError: true);
       return;
     }
-    // Validasi Khusus Sakit: Wajib ada file (Opsional, bisa dihapus jika tidak wajib)
+
+    // Validasi Wajib File jika Sakit
     if (isSick && _selectedFile == null) {
-       _showSnackbar("Mohon upload bukti sakit (Surat Dokter).", isError: true);
-       return;
+      _showSnackbar("Mohon upload bukti sakit (Surat Dokter).", isError: true);
+      return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // 2. Siapkan File (Hanya jika Sakit)
+      // 2. Persiapkan File
       File? fileToSend;
-      if (isSick && _selectedFile != null) {
+      if (_selectedFile != null && _selectedFile!.path != null) {
         fileToSend = File(_selectedFile!.path!);
       }
 
-      // 3. Panggil Service
+      // 3. Kirim ke Backend via Service
+      // Pastikan PermissionService sudah diperbaiki logic key-nya (date vs start_date)
       await _permissionService.submitPermission(
-        type: isSick ? 'sick' : 'permit', // 'permit' untuk izin/cuti
-        date: selectedDate!,
+        type: isSick ? 'sick' : 'permit',
+        startDate: _selectedDateRange!.start,
+        endDate: _selectedDateRange!.end,
         reason: _reasonController.text,
-        attachment: fileToSend, // Akan null jika Izin, ini sudah benar
+        attachment: fileToSend,
       );
 
       // 4. Sukses
       if (mounted) {
         Navigator.pop(context); // Tutup Modal
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Pengajuan berhasil dikirim!"),
-            backgroundColor: AppColors.neonGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
+        Get.snackbar(
+          "Berhasil",
+          "Pengajuan izin berhasil dikirim.",
+          backgroundColor: AppColors.neonGreen,
+          colorText: Colors.white,
+          icon: const Icon(Icons.check_circle_rounded, color: Colors.white),
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          duration: const Duration(seconds: 3),
         );
       }
     } catch (e) {
+      // 5. Error Handling
       if (mounted) {
-        _showSnackbar("Gagal mengirim: ${e.toString()}", isError: true);
+        String errorMsg = e.toString();
+        // Bersihkan pesan error jika terlalu teknis
+        if (errorMsg.contains("Exception:")) {
+          errorMsg = errorMsg.replaceAll("Exception:", "").trim();
+        }
+        _showSnackbar("Gagal: $errorMsg", isError: true);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -127,22 +197,26 @@ class _PermissionFormModalState extends State<PermissionFormModal> {
   }
 
   void _showSnackbar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message, 
-          style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: isError ? AppColors.error : AppColors.neonGreen,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    Get.snackbar(
+      isError ? "Gagal" : "Info",
+      message,
+      backgroundColor: isError ? AppColors.error : AppColors.neonGreen,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+      duration: const Duration(seconds: 3),
+      icon: Icon(
+        isError ? Icons.error_outline : Icons.info_outline,
+        color: Colors.white,
       ),
     );
   }
 
+  // --- UI BUILD ---
   @override
   Widget build(BuildContext context) {
+    // Mengambil padding bottom keyboard agar form naik saat diketik
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -153,399 +227,136 @@ class _PermissionFormModalState extends State<PermissionFormModal> {
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
-            blurRadius: 20,
-            offset: Offset(0, -5),
-          )
+            blurRadius: 30,
+            offset: Offset(0, -10),
+          ),
         ],
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.90, 
+        maxHeight: MediaQuery.of(context).size.height * 0.90,
       ),
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 24),
-                  width: 48,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-
-              // Header
-              Text(
-                "Ajukan Kehadiran",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.hankenGrotesk(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Toggle Izin/Sakit
-              _buildSlidingToggle(),
-              
-              const SizedBox(height: 24),
-
-              // Date Picker
-              Text("Tanggal Mulai", style: _labelStyle),
-              const SizedBox(height: 10),
-              _buildDatePickerButton(context),
-
-              const SizedBox(height: 20),
-
-              // Input Keterangan
-              Text("Keterangan", style: _labelStyle),
-              const SizedBox(height: 10),
-              _buildAnimatedNoteInput(),
-
-              // Upload Area (Hanya muncul jika Sakit)
-              AnimatedSize(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                alignment: Alignment.topCenter,
-                child: isSick 
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 20.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Surat Dokter / Bukti", style: _labelStyle),
-                          const SizedBox(height: 10),
-                          _buildUploadArea(),
-                        ],
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Submit Button
-              _buildSubmitButton(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- WIDGET HELPER ---
-
-  Widget _buildSlidingToggle() {
-    return Container(
-      height: 54,
-      decoration: BoxDecoration(
-        color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: Stack(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          AnimatedAlign(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.fastOutSlowIn,
-            alignment: isSick ? Alignment.centerRight : Alignment.centerLeft,
-            child: FractionallySizedBox(
-              widthFactor: 0.5,
-              child: Container(
-                margin: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+          // Drag Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
-          Row(
-            children: [
-              _buildToggleLabel("Izin / Cuti", !isSick, () => setState(() => isSick = false)),
-              _buildToggleLabel("Sakit", isSick, () => setState(() => isSick = true)),
-            ],
+
+          Flexible(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    "Formulir Pengajuan",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.hankenGrotesk(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Silakan lengkapi data di bawah ini",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.hankenGrotesk(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 1. Toggle Jenis Izin
+                  PermissionToggle(
+                    isSick: isSick,
+                    onChanged: (v) {
+                      setState(() {
+                        isSick = v;
+                        // Reset file jika pindah ke 'Izin' karena opsional
+                        if (!isSick) _clearFile();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 2. Input Tanggal
+                  _buildSectionLabel("Tanggal & Durasi"),
+                  const SizedBox(height: 8),
+                  DateRangeField(
+                    selectedDateRange: _selectedDateRange,
+                    onPickDateRange: _pickDateRange,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 3. Input Alasan
+                  _buildSectionLabel("Keterangan"),
+                  const SizedBox(height: 8),
+                  ReasonInput(
+                    controller: _reasonController,
+                    focusNode: _noteFocus,
+                  ),
+
+                  // 4. Upload File (Animasi muncul jika sakit)
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topCenter,
+                    child: isSick
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 20.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionLabel("Bukti / Surat Dokter"),
+                                const SizedBox(height: 8),
+                                UploadArea(
+                                  fileName: _fileName,
+                                  isSick: isSick,
+                                  onPickFile: _pickFile,
+                                  onClearFile: _clearFile,
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // 5. Tombol Submit
+                  SubmitButton(isLoading: _isLoading, onPressed: _submitData),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildToggleLabel(String text, bool isActive, VoidCallback onTap) {
-    return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: onTap,
-        child: Center(
-          child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: GoogleFonts.hankenGrotesk(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
-            ),
-            child: Text(text),
-          ),
-        ),
+  Widget _buildSectionLabel(String label) {
+    return Text(
+      label,
+      style: GoogleFonts.hankenGrotesk(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
       ),
     );
   }
-
-  Widget _buildDatePickerButton(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () async {
-          FocusManager.instance.primaryFocus?.unfocus();
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: DateTime.now(),
-            firstDate: DateTime.now().subtract(const Duration(days: 7)),
-            lastDate: DateTime.now().add(const Duration(days: 30)),
-          );
-          if (picked != null) setState(() => selectedDate = picked);
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.inputBorder),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.neonCyan.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.calendar_month_rounded, color: AppColors.neonCyan, size: 20),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      selectedDate == null ? "Pilih Tanggal" : DateFormat('dd MMMM yyyy', 'id_ID').format(selectedDate!),
-                      style: GoogleFonts.hankenGrotesk(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    if (selectedDate == null)
-                       Text(
-                        "Tap untuk membuka kalender",
-                        style: GoogleFonts.hankenGrotesk(fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textSecondary),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnimatedNoteInput() {
-    return AnimatedBuilder(
-      animation: _noteFocus,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            color: _noteFocus.hasFocus ? Colors.white : AppColors.inputFill,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: _noteFocus.hasFocus ? AppColors.neonCyan : AppColors.inputBorder,
-              width: _noteFocus.hasFocus ? 1.5 : 1,
-            ),
-            boxShadow: _noteFocus.hasFocus
-                ? [BoxShadow(color: AppColors.neonCyan.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
-          ),
-          child: TextField(
-            controller: _reasonController, // Jangan lupa controller!
-            focusNode: _noteFocus,
-            maxLines: 3,
-            style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: isSick ? "Jelaskan keluhan sakit..." : "Alasan izin/cuti...",
-              hintStyle: GoogleFonts.hankenGrotesk(color: Colors.grey.shade400),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildUploadArea() {
-    bool hasFile = _fileName != null;
-
-    return GestureDetector(
-      onTap: hasFile ? null : _pickFile, 
-      child: Container(
-        height: 90,
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: hasFile ? AppColors.neonCyan.withOpacity(0.05) : const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: hasFile ? AppColors.neonCyan : AppColors.inputBorder,
-            width: hasFile ? 1.5 : 1,
-            style: hasFile ? BorderStyle.solid : BorderStyle.solid, 
-          ),
-        ),
-        child: hasFile 
-          ? Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)
-                    ]
-                  ),
-                  child: const Icon(Icons.description_rounded, color: AppColors.neonCyan, size: 28),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _fileName!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.hankenGrotesk(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        "File berhasil dipilih",
-                        style: GoogleFonts.hankenGrotesk(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: _clearFile, 
-                  icon: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close_rounded, size: 16, color: Colors.grey),
-                  ),
-                ),
-              ],
-            )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.cloud_upload_rounded, color: AppColors.neonCyan, size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  "Tap untuk upload Bukti (JPG/PDF)",
-                  style: GoogleFonts.hankenGrotesk(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [AppColors.buttonGradientTop, AppColors.buttonGradientBottom],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.buttonBlack.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: Colors.white.withOpacity(0.1),
-            blurRadius: 0,
-            offset: const Offset(0, 1),
-            spreadRadius: 0,
-            blurStyle: BlurStyle.inner
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          // --- PANGGIL FUNGSI _submitData DI SINI ---
-          onTap: _isLoading ? null : _submitData, 
-          child: Center(
-            child: _isLoading 
-              ? const SizedBox(
-                  height: 24, width: 24,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                )
-              : Text(
-                  "Kirim Pengajuan",
-                  style: GoogleFonts.hankenGrotesk(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  TextStyle get _labelStyle => GoogleFonts.hankenGrotesk(
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
-    color: AppColors.textSecondary,
-  );
 }

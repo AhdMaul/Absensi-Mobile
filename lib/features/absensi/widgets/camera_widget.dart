@@ -5,13 +5,9 @@ import 'package:flutter/material.dart';
 
 class CameraWidget extends StatefulWidget {
   final Function(XFile? imageFile)? onPictureTaken;
-  final Function(bool isReady)? onCameraReady; 
+  final Function(bool isReady)? onCameraReady;
 
-  const CameraWidget({
-    this.onPictureTaken,
-    this.onCameraReady,
-    super.key,
-  });
+  const CameraWidget({this.onPictureTaken, this.onCameraReady, super.key});
 
   @override
   State<CameraWidget> createState() => _CameraWidgetState();
@@ -45,10 +41,8 @@ class _CameraWidgetState extends State<CameraWidget> {
 
       controller = CameraController(
         frontCamera,
-        // --- PERBAIKAN DI SINI ---
-        // Ganti 'high' ke 'medium'. 'high' membuat base64 terlalu besar
-        // sehingga server kehabisan RAM (Error 500) saat decode.
-        ResolutionPreset.medium, 
+
+        ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
@@ -82,7 +76,9 @@ class _CameraWidgetState extends State<CameraWidget> {
     if (!_isCameraInitialized || controller == null) {
       return Container(
         color: Colors.black,
-        child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
 
@@ -92,16 +88,14 @@ class _CameraWidgetState extends State<CameraWidget> {
         final cameraAspectRatio = controller!.value.aspectRatio;
         final screenAspectRatio = constraints.maxWidth / constraints.maxHeight;
 
-        scale = 1 / (cameraAspectRatio * screenAspectRatio); 
+        scale = 1 / (cameraAspectRatio * screenAspectRatio);
         if (scale < 1) scale = 1 / scale;
 
         return ClipRect(
           child: Transform.scale(
             scale: scale,
             alignment: Alignment.center,
-            child: Center(
-              child: CameraPreview(controller!),
-            ),
+            child: Center(child: CameraPreview(controller!)),
           ),
         );
       },

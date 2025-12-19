@@ -33,22 +33,25 @@ class AttendanceStatusCards extends StatelessWidget {
     );
   }
 
-  Widget _buildCard({required String title, required String time, required IconData icon, required Color color}) {
+  Widget _buildCard({
+    required String title,
+    required String time,
+    required IconData icon,
+    required Color color,
+  }) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          // UBAH: Warna putih SOLID (jangan pakai withValues/opacity)
-          // Agar kontras dengan background layar yang abu-abu muda
-          color: Colors.white, 
-          borderRadius: BorderRadius.circular(20), // Radius diperhalus
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20), // Radius
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.shade200, // Shadow warna abu soft
               blurRadius: 10,
               offset: const Offset(0, 4),
-            )
+            ),
           ],
         ),
         child: Column(

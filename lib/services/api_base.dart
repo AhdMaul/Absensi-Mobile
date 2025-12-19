@@ -17,8 +17,8 @@ class ApiException implements Exception {
 
 class ApiBase {
   // URL Backend (Pastikan URL ini benar dan bisa diakses)
-  static const String _baseUrlExpress = "https://my-backend-5rrp.onrender.com/api";
-  static const String _baseUrlFastAPI = "https://eshrm.onrender.com/api";
+  static const String _baseUrlExpress = "http://192.168.1.90:5000/api";
+  static const String _baseUrlFastAPI = "http://192.168.1.90:8000/api";
 
   // Timeout dinaikkan ke 60 detik untuk mengakomodasi proses upload/AI yang lama
   static const Duration _timeoutDuration = Duration(seconds: 60);
@@ -107,14 +107,12 @@ class ApiBase {
     }
   }
 
-  // --- METHOD MULTIPART (DIPERBARUI) ---
-  // Parameter 'fileField' memungkinkan kita mengganti nama field file (default: 'images')
-  // Ini penting untuk fitur Izin yang menggunakan field 'attachment'
+
   Future<Map<String, dynamic>> postMultipart(
     String endpoint, {
     required List<String> filePaths,
     Map<String, String>? fields,
-    String fileField = 'images', // Default 'images' (untuk Face Rec), ganti jadi 'attachment' utk Izin
+    String fileField = 'images', 
     bool useExpress = false,
   }) async {
     final baseUrl = useExpress ? _baseUrlExpress : _baseUrlFastAPI;
@@ -158,11 +156,9 @@ class ApiBase {
         responseBody = jsonDecode(response.body);
       }
     } catch (e) {
-      // Menangani kasus jika server error mengembalikan HTML (bukan JSON)
       if (response.statusCode == 500) {
         throw ApiException("Server Error (Internal). Coba lagi nanti.", statusCode: 500);
       }
-      // Jika bukan 500 tapi format salah
       throw ApiException("Format respon server tidak valid.", statusCode: response.statusCode);
     }
 

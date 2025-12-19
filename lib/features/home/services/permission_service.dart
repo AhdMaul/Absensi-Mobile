@@ -1,49 +1,50 @@
+// lib/features/home/services/permission_service.dart
+
 import 'dart:io';
-import '../../../services/api_base.dart'; // Import ApiBase
+import 'package:intl/intl.dart';
+import '../../../services/api_base.dart';
 
 class PermissionService {
-  // Endpoint API (sesuai route di backend: /api/permissions)
-  final String _endpoint = "/permissions"; 
+  final String _endpoint = "/permissions";
 
   Future<bool> submitPermission({
-    required String type, // 'sick' atau 'permit'
-    required DateTime date,
+    required String type,
+    required DateTime startDate,
+    required DateTime endDate,
     required String reason,
     File? attachment,
   }) async {
     try {
-      // 1. Siapkan Data Fields
+      String dateToSend = startDate.toIso8601String();
+
+      String formattedEnd = DateFormat('dd MMM yyyy').format(endDate);
+      String combinedReason = "$reason (Sampai tgl: $formattedEnd)";
+
       final Map<String, String> fields = {
         'type': type,
-        'date': date.toIso8601String(),
-        'reason': reason,
+        'date': dateToSend, 
+        'reason': combinedReason,
       };
 
-      // 2. Siapkan File (Jika ada)
+      // 4. Siapkan List File
       List<String> files = [];
-      if (type == 'sick' && attachment != null) {
+      if (attachment != null) {
         files.add(attachment.path);
       }
 
-      // 3. Panggil ApiBase
-      // Kita gunakan postMultipart untuk keduanya (Izin & Sakit).
-      // Jika Izin, list 'files' kosong, request tetap valid sebagai Multipart.
-      final response = await ApiBase.instance.postMultipart(
+      // 5. Kirim Request
+      await ApiBase.instance.postMultipart(
         _endpoint,
         fields: fields,
         filePaths: files,
-        fileField: 'attachment', // Sesuai requirement backend
-        useExpress: true,        // Backend Permission ada di Express
+        fileField: 'attachment', 
+        useExpress: true,
       );
 
-      // 4. Cek Response
-      // ApiBase otomatis melempar error jika status != 200/201,
-      // jadi jika sampai sini berarti sukses.
       return true;
-
     } catch (e) {
       print("Error submitPermission: $e");
-      rethrow; // Lempar error ke UI (Modal) untuk ditampilkan di Snackbar
+      rethrow;
     }
   }
 }

@@ -1,7 +1,7 @@
 // lib/features/absensi/widgets/verify_face_widgets.dart
 
 import 'dart:async';
-import 'dart:ui' as ui; // IMPORT WAJIB UNTUK PATH METRICS
+import 'dart:ui' as ui; 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,38 +12,37 @@ import 'camera_widget.dart';
 import '../models/verification_result_model.dart';
 
 class FaceVerificationStep extends StatefulWidget {
-  final Function(VerificationResultModel result, DateTime captureTime) onVerificationSuccess;
+  final Function(VerificationResultModel result, DateTime captureTime)
+  onVerificationSuccess;
 
-  const FaceVerificationStep({
-    super.key,
-    required this.onVerificationSuccess,
-  });
+  const FaceVerificationStep({super.key, required this.onVerificationSuccess});
 
   @override
   State<FaceVerificationStep> createState() => _FaceVerificationStepState();
 }
 
-class _FaceVerificationStepState extends State<FaceVerificationStep> with TickerProviderStateMixin {
+class _FaceVerificationStepState extends State<FaceVerificationStep>
+    with TickerProviderStateMixin {
   final _faceService = FaceRecognitionService();
-  final GlobalKey _cameraKey = GlobalKey(); 
+  final GlobalKey _cameraKey = GlobalKey();
 
   bool _isLoadingVerification = false;
   String _statusMessage = "Posisikan wajah di dalam area";
   Color _statusColor = Colors.white;
-  
+
   // Countdown State
   int _countdown = 3;
   Timer? _timer;
   bool _isCameraReady = false;
 
   // Animation Controllers
-  late AnimationController _breathingController; 
-  late AnimationController _scanController;      
+  late AnimationController _breathingController;
+  late AnimationController _scanController;
 
   @override
   void initState() {
     super.initState();
-    
+
     _breathingController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -92,7 +91,7 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
   void _triggerCapture() {
     final state = _cameraKey.currentState;
     // ignore: invalid_use_of_protected_member
-    (state as dynamic).takePicture(); 
+    (state as dynamic).takePicture();
   }
 
   void _onPictureCaptured(XFile? imageFile) {
@@ -109,12 +108,14 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
 
     try {
       final result = await _faceService.verifyFace(imageToVerify);
-      
+
       // Print log untuk debugging logika UI
-      print("UI Logic -> Verification Result: verified=${result.verified}, message=${result.message}");
-      
+      print(
+        "UI Logic -> Verification Result: verified=${result.verified}, message=${result.message}",
+      );
+
       if (result.verified) {
-        _breathingController.stop(); 
+        _breathingController.stop();
         _scanController.stop();
         widget.onVerificationSuccess(result, DateTime.now());
       } else {
@@ -134,12 +135,12 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
       _statusColor = isError ? AppColors.error : Colors.white;
       _countdown = 3;
     });
-    
+
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() {
-           _statusMessage = "Posisikan wajah di dalam area";
-           _statusColor = Colors.white;
+          _statusMessage = "Posisikan wajah di dalam area";
+          _statusColor = Colors.white;
         });
         _startCountdown();
       }
@@ -151,7 +152,7 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
     return Column(
       children: [
         Container(
-          height: 400, 
+          height: 400,
           width: double.infinity,
           decoration: BoxDecoration(
             color: Colors.black,
@@ -161,7 +162,7 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
                 color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
-              )
+              ),
             ],
           ),
           child: ClipRRect(
@@ -178,7 +179,10 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
 
                 // 2. OVERLAY CANGGIH
                 AnimatedBuilder(
-                  animation: Listenable.merge([_breathingController, _scanController]),
+                  animation: Listenable.merge([
+                    _breathingController,
+                    _scanController,
+                  ]),
                   builder: (context, child) {
                     return CustomPaint(
                       painter: TechFaceOverlayPainter(
@@ -192,55 +196,77 @@ class _FaceVerificationStepState extends State<FaceVerificationStep> with Ticker
 
                 // 3. COUNTDOWN & STATUS
                 Positioned(
-                  bottom: 30, left: 0, right: 0,
+                  bottom: 30,
+                  left: 0,
+                  right: 0,
                   child: Column(
                     children: [
-                      if (_countdown > 0 && _isCameraReady && !_isLoadingVerification)
+                      if (_countdown > 0 &&
+                          _isCameraReady &&
+                          !_isLoadingVerification)
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.3),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
                           ),
                           child: Text(
                             "$_countdown",
                             style: GoogleFonts.hankenGrotesk(
-                              fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white,
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                         ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: _isLoadingVerification
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(
-                                  width: 16, height: 16,
-                                  child: CircularProgressIndicator(color: AppColors.neonGreen, strokeWidth: 2),
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.neonGreen,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "Memverifikasi Wajah...",
+                                    style: GoogleFonts.hankenGrotesk(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                _statusMessage,
+                                style: GoogleFonts.hankenGrotesk(
+                                  color: _statusColor,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
                                 ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  "Memverifikasi Wajah...",
-                                  style: GoogleFonts.hankenGrotesk(color: Colors.white),
-                                )
-                              ],
-                            )
-                          : Text(
-                              _statusMessage,
-                              style: GoogleFonts.hankenGrotesk(
-                                color: _statusColor, fontWeight: FontWeight.w600, letterSpacing: 0.5
                               ),
-                            ),
                       ),
                     ],
                   ),
@@ -268,12 +294,12 @@ class TechFaceOverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    
+
     final bgPaint = Paint()..color = Colors.black.withValues(alpha: 0.7);
     final backgroundPath = Path()..addRect(rect);
 
-    final scale = 0.98 + (breathingValue * 0.04); 
-    
+    final scale = 0.98 + (breathingValue * 0.04);
+
     final ovalW = size.width * 0.65 * scale;
     final ovalH = size.height * 0.50 * scale;
     final ovalLeft = (size.width - ovalW) / 2;
@@ -282,14 +308,20 @@ class TechFaceOverlayPainter extends CustomPainter {
 
     final facePath = Path()..addOval(faceRect);
 
-    final maskPath = Path.combine(PathOperation.difference, backgroundPath, facePath);
+    final maskPath = Path.combine(
+      PathOperation.difference,
+      backgroundPath,
+      facePath,
+    );
     canvas.drawPath(maskPath, bgPaint);
 
     final outlinePaint = Paint()
-      ..color = isLoading ? AppColors.neonGreen : Colors.white.withValues(alpha: 0.5)
+      ..color = isLoading
+          ? AppColors.neonGreen
+          : Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-    
+
     _drawDashedPath(canvas, facePath, outlinePaint);
 
     final cornerPaint = Paint()
@@ -301,18 +333,50 @@ class TechFaceOverlayPainter extends CustomPainter {
     final double cornerLen = 30;
     final double gap = 20;
 
-    canvas.drawLine(Offset(ovalLeft - gap, ovalTop - gap + cornerLen), Offset(ovalLeft - gap, ovalTop - gap), cornerPaint);
-    canvas.drawLine(Offset(ovalLeft - gap, ovalTop - gap), Offset(ovalLeft - gap + cornerLen, ovalTop - gap), cornerPaint);
-    canvas.drawLine(Offset(faceRect.right + gap - cornerLen, ovalTop - gap), Offset(faceRect.right + gap, ovalTop - gap), cornerPaint);
-    canvas.drawLine(Offset(faceRect.right + gap, ovalTop - gap), Offset(faceRect.right + gap, ovalTop - gap + cornerLen), cornerPaint);
-    canvas.drawLine(Offset(ovalLeft - gap, faceRect.bottom + gap - cornerLen), Offset(ovalLeft - gap, faceRect.bottom + gap), cornerPaint);
-    canvas.drawLine(Offset(ovalLeft - gap, faceRect.bottom + gap), Offset(ovalLeft - gap + cornerLen, faceRect.bottom + gap), cornerPaint);
-    canvas.drawLine(Offset(faceRect.right + gap, faceRect.bottom + gap - cornerLen), Offset(faceRect.right + gap, faceRect.bottom + gap), cornerPaint);
-    canvas.drawLine(Offset(faceRect.right + gap, faceRect.bottom + gap), Offset(faceRect.right + gap - cornerLen, faceRect.bottom + gap), cornerPaint);
+    canvas.drawLine(
+      Offset(ovalLeft - gap, ovalTop - gap + cornerLen),
+      Offset(ovalLeft - gap, ovalTop - gap),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(ovalLeft - gap, ovalTop - gap),
+      Offset(ovalLeft - gap + cornerLen, ovalTop - gap),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(faceRect.right + gap - cornerLen, ovalTop - gap),
+      Offset(faceRect.right + gap, ovalTop - gap),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(faceRect.right + gap, ovalTop - gap),
+      Offset(faceRect.right + gap, ovalTop - gap + cornerLen),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(ovalLeft - gap, faceRect.bottom + gap - cornerLen),
+      Offset(ovalLeft - gap, faceRect.bottom + gap),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(ovalLeft - gap, faceRect.bottom + gap),
+      Offset(ovalLeft - gap + cornerLen, faceRect.bottom + gap),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(faceRect.right + gap, faceRect.bottom + gap - cornerLen),
+      Offset(faceRect.right + gap, faceRect.bottom + gap),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(faceRect.right + gap, faceRect.bottom + gap),
+      Offset(faceRect.right + gap - cornerLen, faceRect.bottom + gap),
+      cornerPaint,
+    );
 
     if (!isLoading) {
       final scanY = ovalTop + (ovalH * scanValue);
-      
+
       final scanPaint = Paint()
         ..shader = LinearGradient(
           colors: [
@@ -328,15 +392,12 @@ class TechFaceOverlayPainter extends CustomPainter {
 
   void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
     final ui.PathMetrics pathMetrics = path.computeMetrics();
-    
+
     for (final ui.PathMetric pathMetric in pathMetrics) {
       double distance = 0.0;
       while (distance < pathMetric.length) {
-        canvas.drawPath(
-          pathMetric.extractPath(distance, distance + 10), 
-          paint,
-        );
-        distance += 20; 
+        canvas.drawPath(pathMetric.extractPath(distance, distance + 10), paint);
+        distance += 20;
       }
     }
   }

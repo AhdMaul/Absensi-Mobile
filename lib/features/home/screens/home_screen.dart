@@ -41,10 +41,10 @@ class HomeScreen extends StatelessWidget {
                     // 1. Bola Hijau (Header Glow)
                     // Diposisikan di pojok kiri atas untuk highlight area "Selamat Datang"
                     Positioned(
-                      top: -100, 
+                      top: -100,
                       left: -80,
                       child: Container(
-                        width: 350, 
+                        width: 350,
                         height: 350,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -53,14 +53,14 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     // 2. Bola Cyan/Biru (Bottom Glow)
                     // Diposisikan di kanan bawah atau tengah untuk variasi
                     Positioned(
-                      top: 200, 
+                      top: 200,
                       right: -150,
                       child: Container(
-                        width: 400, 
+                        width: 400,
                         height: 400,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -75,11 +75,13 @@ class HomeScreen extends StatelessWidget {
                       bottom: -100,
                       left: 50,
                       child: Container(
-                        width: 300, 
+                        width: 300,
                         height: 300,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF6C63FF).withValues(alpha: 0.05),
+                          color: const Color(
+                            0xFF6C63FF,
+                          ).withValues(alpha: 0.05),
                         ),
                       ),
                     ),
@@ -90,7 +92,7 @@ class HomeScreen extends StatelessWidget {
 
             // --- LAYER 2: UI Content ---
             SafeArea(
-              bottom: false, 
+              bottom: false,
               child: Column(
                 children: [
                   // AppBar Custom
@@ -105,7 +107,7 @@ class HomeScreen extends StatelessWidget {
                           'Beranda',
                           style: GoogleFonts.hankenGrotesk(
                             fontSize: 28,
-                            fontWeight: FontWeight.w800, 
+                            fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
                             letterSpacing: -0.5,
                           ),
@@ -121,18 +123,22 @@ class HomeScreen extends StatelessWidget {
                             height: 44,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.8), // Sedikit transparan biar background tembus dikit
-                              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                              color: Colors.white.withValues(
+                                alpha: 0.8,
+                              ), // Sedikit transparan biar background tembus dikit
+                              border: Border.all(
+                                color: Colors.grey.withValues(alpha: 0.2),
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
-                                )
+                                ),
                               ],
                             ),
                             child: const Icon(
-                              Icons.person_rounded, 
+                              Icons.person_rounded,
                               color: AppColors.textPrimary,
                               size: 22,
                             ),
@@ -141,12 +147,10 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   // Body
                   Expanded(
-                    child: ConnectivityBanner(
-                      child: const HomeContent(),
-                    ),
+                    child: ConnectivityBanner(child: const HomeContent()),
                   ),
                 ],
               ),

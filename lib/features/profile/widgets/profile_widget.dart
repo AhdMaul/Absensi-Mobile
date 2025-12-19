@@ -28,12 +28,12 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _userName = prefs.getString('userName') ?? "Deswita"; 
-        _userEmail = "deswita@eshrm.com";
+        // Ambil data dari SharedPreferences
+        _userName = prefs.getString('userName') ?? "User"; 
+        _userEmail = prefs.getString('userEmail') ?? "user@email.com";
       });
     }
   }
-
   // --- FUNGSI LOGOUT DENGAN KONFIRMASI ---
   Future<void> _handleLogout() async {
     // Tampilkan Dialog Konfirmasi terlebih dahulu
